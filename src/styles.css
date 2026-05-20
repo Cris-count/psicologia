@@ -1,3 +1,563 @@
-/* You can add global styles to this file, and also import other style files */
-
 @import 'tailwindcss';
+
+:root {
+  color-scheme: light;
+  --bg: #f6f7f4;
+  --surface: #ffffff;
+  --surface-soft: #eef4ef;
+  --ink: #19211d;
+  --muted: #607066;
+  --line: #dfe7e1;
+  --primary: #176b5b;
+  --primary-dark: #0f4c41;
+  --accent: #b45c3d;
+  --warning: #9b6a1c;
+  --danger: #a43b3b;
+  --success: #24744a;
+  --shadow: 0 18px 45px rgba(31, 49, 40, 0.09);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+input,
+textarea,
+select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  padding: 0.75rem 0.8rem;
+}
+
+textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+
+label {
+  display: grid;
+  gap: 0.4rem;
+  color: #34443a;
+  font-size: 0.92rem;
+  font-weight: 650;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 680px;
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--line);
+  padding: 0.8rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  color: #46554d;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.login-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background:
+    linear-gradient(135deg, rgba(23, 107, 91, 0.13), transparent 42%),
+    linear-gradient(315deg, rgba(180, 92, 61, 0.14), transparent 38%),
+    var(--bg);
+}
+
+.login-panel {
+  width: min(980px, 100%);
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  gap: 2rem;
+  align-items: center;
+}
+
+.login-panel h1,
+.page-header h2,
+.student-header h1 {
+  margin: 0;
+  line-height: 1.05;
+}
+
+.login-panel h1 {
+  max-width: 650px;
+  font-size: clamp(2.3rem, 6vw, 4.6rem);
+}
+
+.intro {
+  max-width: 640px;
+  color: var(--muted);
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.login-card,
+.panel,
+.metric-card {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.login-card {
+  display: grid;
+  gap: 1rem;
+  padding: 1.35rem;
+}
+
+.demo-box {
+  display: grid;
+  gap: 0.25rem;
+  border-left: 4px solid var(--primary);
+  background: var(--surface-soft);
+  padding: 0.9rem;
+  color: #435249;
+  font-size: 0.9rem;
+}
+
+.form-error {
+  margin: 0;
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.25rem;
+  border-right: 1px solid var(--line);
+  background: #15221d;
+  color: #edf5ef;
+  padding: 1.4rem;
+}
+
+.sidebar .muted,
+.sidebar .eyebrow {
+  color: #bfd2c8;
+}
+
+.sidebar h1 {
+  margin: 0;
+  font-size: 1.65rem;
+}
+
+.sidebar nav {
+  display: grid;
+  gap: 0.35rem;
+  margin-block: 1rem auto;
+}
+
+.sidebar nav button {
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #edf5ef;
+  padding: 0.7rem 0.8rem;
+  text-align: left;
+}
+
+.sidebar nav button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar nav button.active-nav {
+  background: #edf5ef;
+  color: #15221d;
+}
+
+.content,
+.student-shell {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 1.4rem;
+}
+
+.page-header,
+.student-header,
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.section-heading {
+  scroll-margin-top: 1rem;
+}
+
+.page-header h2 {
+  font-size: clamp(2rem, 4vw, 3.3rem);
+}
+
+.page-header p,
+.section-heading p,
+.student-header p,
+.muted {
+  color: var(--muted);
+}
+
+.section-heading h2 {
+  margin: 0;
+  font-size: clamp(1.7rem, 3vw, 2.5rem);
+}
+
+.eyebrow {
+  margin: 0 0 0.55rem;
+  color: var(--primary);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.status-note {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  padding: 0.7rem 0.95rem;
+  white-space: nowrap;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.metric-card {
+  display: grid;
+  gap: 0.4rem;
+  padding: 1rem;
+}
+
+.metric-card span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.metric-card strong {
+  font-size: 2rem;
+}
+
+.workspace-grid,
+.student-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: 1rem;
+  margin-bottom: 1rem;
+  align-items: start;
+}
+
+.wide-left {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+}
+
+.panel {
+  padding: 1rem;
+}
+
+.panel h2,
+.panel h3 {
+  margin: 0 0 0.8rem;
+}
+
+.stack-form,
+.list,
+.card-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.primary-button,
+.ghost-button {
+  border: 0;
+  border-radius: 8px;
+  padding: 0.78rem 1rem;
+  font-weight: 750;
+}
+
+.primary-button {
+  background: var(--primary);
+  color: #fff;
+}
+
+.primary-button:hover {
+  background: var(--primary-dark);
+}
+
+.ghost-button {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+}
+
+.sidebar .ghost-button {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.list-item,
+.plain-select,
+.classroom-card,
+.situation-card,
+.answer-button {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  text-align: left;
+}
+
+.list-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem;
+}
+
+.list-item span,
+.plain-select,
+.classroom-card,
+.situation-card {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.list-item small,
+.plain-select small,
+.classroom-card span,
+.classroom-card small,
+.situation-card span,
+.situation-card small,
+.scenario-block small {
+  color: var(--muted);
+}
+
+.case-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 145px;
+  gap: 0.6rem;
+}
+
+.plain-select {
+  padding: 0.75rem;
+}
+
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.compact-label {
+  margin-bottom: 0.75rem;
+}
+
+.student-shell {
+  min-height: 100vh;
+}
+
+.student-header {
+  align-items: center;
+}
+
+.student-header h1 {
+  font-size: clamp(2rem, 5vw, 4rem);
+}
+
+.student-grid {
+  grid-template-columns: minmax(260px, 330px) minmax(0, 1fr);
+}
+
+.learning-area {
+  display: grid;
+  gap: 1rem;
+}
+
+.classroom-card,
+.situation-card {
+  width: 100%;
+  padding: 1rem;
+}
+
+.classroom-card:hover,
+.situation-card:hover,
+.list-item:hover,
+.plain-select:hover {
+  border-color: var(--primary);
+}
+
+.situation-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 0.75rem;
+}
+
+meter {
+  width: 100%;
+  height: 0.7rem;
+}
+
+.scenario-reader {
+  display: grid;
+  gap: 1rem;
+}
+
+.reader-intro {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 1rem;
+}
+
+.scenario-block {
+  display: grid;
+  gap: 0.8rem;
+  border-left: 4px solid var(--primary);
+  padding-left: 1rem;
+}
+
+.scenario-block h3,
+.question-card h4 {
+  margin: 0;
+}
+
+.question-card {
+  display: grid;
+  gap: 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfa;
+  padding: 1rem;
+}
+
+.question-category {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.answer-grid {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.answer-button {
+  padding: 0.85rem;
+}
+
+.answer-button.selected {
+  border-color: var(--warning);
+}
+
+.answer-button.correct {
+  border-color: var(--success);
+  background: #edf8f1;
+}
+
+.answer-button.incorrect {
+  border-color: var(--danger);
+  background: #fff0f0;
+}
+
+.feedback-box {
+  display: grid;
+  gap: 0.25rem;
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: #35473d;
+  padding: 0.85rem;
+}
+
+@media (max-width: 980px) {
+  .app-shell,
+  .login-panel,
+  .workspace-grid,
+  .wide-left,
+  .student-grid,
+  .metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+    height: auto;
+  }
+
+  .page-header,
+  .student-header {
+    flex-direction: column;
+  }
+
+  .status-note {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 620px) {
+  .content,
+  .student-shell {
+    padding: 0.85rem;
+  }
+
+  .case-item {
+    grid-template-columns: 1fr;
+  }
+}
