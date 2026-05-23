@@ -14,7 +14,7 @@ export const roleGuard = (roles: UserRole[]): CanActivateFn => {
     }
 
     if (!roles.includes(user.role)) {
-      return router.createUrlTree([user.role === 'TEACHER' ? '/teacher' : '/student']);
+      return router.createUrlTree([auth.homeRouteFor(user.role)]);
     }
 
     return true;

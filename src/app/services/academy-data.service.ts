@@ -5,7 +5,7 @@ import {
   AnswerOption,
   Difficulty,
   GameGroup,
-  GroupSituation,
+  GroupTask,
   GroupStudent,
   Question,
   QuestionCategory,
@@ -15,10 +15,11 @@ import {
   SituationStatus,
   StudentAnswer,
   StudentProgress,
+  TaskDraft,
   User,
 } from '../models/academy.models';
 
-const STORE_KEY = 'academic-case-simulator-store-v1';
+const STORE_KEY = 'academic-case-simulator-store-v3';
 
 @Injectable({ providedIn: 'root' })
 export class AcademyDataService {
@@ -55,8 +56,29 @@ export class AcademyDataService {
     return this.store().users.filter((user) => user.role === 'STUDENT');
   }
 
-  situationsByTeacher(teacherId: string): Situation[] {
-    return this.store().situations.filter((situation) => situation.teacherId === teacherId);
+  /** Catálogo publicado por el superadmin, visible para maestros al crear tareas. */
+  catalogSituations(): Situation[] {
+    return this.store().situations.filter((situation) => situation.status === 'PUBLISHED');
+  }
+
+  /** Escenarios publicados del catalogo (pertenecen a situaciones publicadas). */
+  catalogScenarios(): Scenario[] {
+    const publishedIds = new Set(this.catalogSituations().map((situation) => situation.id));
+    return this.store()
+      .scenarios.filter((scenario) => publishedIds.has(scenario.situationId))
+      .sort((a, b) => a.orderIndex - b.orderIndex);
+  }
+
+  /** Preguntas publicadas del catalogo (pertenecen a escenarios publicados). */
+  catalogQuestions(): Question[] {
+    const scenarioIds = new Set(this.catalogScenarios().map((scenario) => scenario.id));
+    return this.store()
+      .questions.filter((question) => scenarioIds.has(question.scenarioId))
+      .sort((a, b) => a.orderIndex - b.orderIndex);
+  }
+
+  situationsBySuperAdmin(superAdminId: string): Situation[] {
+    return this.store().situations.filter((situation) => situation.createdById === superAdminId);
   }
 
   createGroup(teacherId: string, name: string, description: string): void {
@@ -125,7 +147,7 @@ export class AcademyDataService {
   }
 
   createSituation(
-    teacherId: string,
+    superAdminId: string,
     title: string,
     description: string,
     context: string,
@@ -141,7 +163,7 @@ export class AcademyDataService {
       learningObjective: learningObjective.trim(),
       difficulty,
       status: 'DRAFT',
-      teacherId,
+      createdById: superAdminId,
       createdAt: now,
       updatedAt: now,
     };
@@ -201,12 +223,80 @@ export class AcademyDataService {
     });
   }
 
-  assignSituationToGroup(groupId: string, situationId: string): void {
-    if (this.store().groupSituations.some((assignment) => assignment.groupId === groupId && assignment.situationId === situationId)) {
-      return;
+  /** El maestro vincula situacion, escenarios y preguntas mediante checklist. */
+  assignTaskToGroup(draft: TaskDraft): GroupTask | undefined {
+    const situation = this.store().situations.find((item) => item.id === draft.situationId);
+    if (!situation || situation.status !== 'PUBLISHED') {
+      return undefined;
     }
-    const assignment: GroupSituation = { id: this.id('gsi'), groupId, situationId, assignedAt: new Date().toISOString() };
-    this.commit({ ...this.store(), groupSituations: [assignment, ...this.store().groupSituations] });
+
+    const scenarioIds = [...new Set(draft.scenarioIds)].filter((id) => {
+      const scenario = this.store().scenarios.find((item) => item.id === id);
+      return scenario?.situationId === draft.situationId;
+    });
+    const questionIds = [...new Set(draft.questionIds)].filter((id) => {
+      const question = this.store().questions.find((item) => item.id === id);
+      if (!question) {
+        return false;
+      }
+      const scenario = this.store().scenarios.find((item) => item.id === question.scenarioId);
+      return scenario?.situationId === draft.situationId && scenarioIds.includes(question.scenarioId);
+    });
+
+    if (!scenarioIds.length || !questionIds.length) {
+      return undefined;
+    }
+
+    const task: GroupTask = {
+      id: this.id('tsk'),
+      groupId: draft.groupId,
+      situationId: draft.situationId,
+      scenarioIds,
+      questionIds,
+      assignedAt: new Date().toISOString(),
+    };
+    this.commit({ ...this.store(), groupTasks: [task, ...this.store().groupTasks] });
+    return task;
+  }
+
+  tasksForGroup(groupId: string): GroupTask[] {
+    return this.store()
+      .groupTasks.filter((task) => task.groupId === groupId)
+      .sort((a, b) => b.assignedAt.localeCompare(a.assignedAt));
+  }
+
+  taskById(taskId: string): GroupTask | undefined {
+    return this.store().groupTasks.find((task) => task.id === taskId);
+  }
+
+  situationForTask(task: GroupTask): Situation | undefined {
+    return this.store().situations.find((situation) => situation.id === task.situationId);
+  }
+
+  scenariosForTask(task: GroupTask): Scenario[] {
+    const selected = new Set(task.scenarioIds);
+    return this.store()
+      .scenarios.filter((scenario) => selected.has(scenario.id))
+      .sort((a, b) => a.orderIndex - b.orderIndex);
+  }
+
+  questionsForTask(task: GroupTask, scenarioId?: string): Question[] {
+    const selected = new Set(task.questionIds);
+    return this.store()
+      .questions.filter((question) => {
+        if (!selected.has(question.id)) {
+          return false;
+        }
+        return scenarioId ? question.scenarioId === scenarioId : true;
+      })
+      .sort((a, b) => a.orderIndex - b.orderIndex);
+  }
+
+  tasksForStudentInGroup(studentId: string, groupId: string): GroupTask[] {
+    const belongsToGroup = this.store().groupStudents.some(
+      (membership) => membership.groupId === groupId && membership.studentId === studentId,
+    );
+    return belongsToGroup ? this.tasksForGroup(groupId) : [];
   }
 
   groupsForStudent(studentId: string): GameGroup[] {
@@ -219,13 +309,9 @@ export class AcademyDataService {
   }
 
   situationsForGroup(groupId: string): Situation[] {
-    const situationIds = new Set(
-      this.store()
-        .groupSituations.filter((assignment) => assignment.groupId === groupId)
-        .map((assignment) => assignment.situationId),
-    );
+    const taskSituationIds = new Set(this.tasksForGroup(groupId).map((task) => task.situationId));
     return this.store().situations.filter(
-      (situation) => situationIds.has(situation.id) && situation.status === 'PUBLISHED',
+      (situation) => taskSituationIds.has(situation.id) && situation.status === 'PUBLISHED',
     );
   }
 
@@ -247,11 +333,11 @@ export class AcademyDataService {
       .sort((a, b) => a.orderIndex - b.orderIndex);
   }
 
-  answerQuestion(studentId: string, questionId: string, selectedOptionId: string): void {
+  answerQuestion(studentId: string, taskId: string, questionId: string, selectedOptionId: string): void {
+    const task = this.taskById(taskId);
     const option = this.store().answerOptions.find((item) => item.id === selectedOptionId);
     const question = this.store().questions.find((item) => item.id === questionId);
-    const scenario = question ? this.store().scenarios.find((item) => item.id === question.scenarioId) : undefined;
-    if (!option || !question || !scenario) {
+    if (!task || !option || !question || !task.questionIds.includes(questionId)) {
       return;
     }
     const answer: StudentAnswer = {
@@ -267,19 +353,19 @@ export class AcademyDataService {
       ...this.store().studentAnswers.filter((item) => !(item.studentId === studentId && item.questionId === questionId)),
     ];
     this.commit({ ...this.store(), studentAnswers: answers });
-    this.recalculateProgress(studentId, scenario.situationId);
+    this.recalculateProgress(studentId, task);
   }
 
   answerForQuestion(studentId: string, questionId: string): StudentAnswer | undefined {
     return this.store().studentAnswers.find((answer) => answer.studentId === studentId && answer.questionId === questionId);
   }
 
-  progressFor(studentId: string, situationId: string): StudentProgress {
+  progressFor(studentId: string, taskId: string): StudentProgress {
     return (
-      this.store().studentProgress.find((progress) => progress.studentId === studentId && progress.situationId === situationId) ?? {
+      this.store().studentProgress.find((progress) => progress.studentId === studentId && progress.taskId === taskId) ?? {
         id: this.id('tmp'),
         studentId,
-        situationId,
+        taskId,
         progressPercentage: 0,
         completed: false,
         updatedAt: new Date().toISOString(),
@@ -289,6 +375,7 @@ export class AcademyDataService {
 
   resultRowsForGroup(groupId: string): Array<{
     student: User;
+    task: GroupTask;
     situation: Situation;
     progress: StudentProgress;
     correct: number;
@@ -298,25 +385,32 @@ export class AcademyDataService {
     const studentIds = this.store()
       .groupStudents.filter((membership) => membership.groupId === groupId)
       .map((membership) => membership.studentId);
-    const situations = this.situationsForGroup(groupId);
+    const tasks = this.tasksForGroup(groupId);
     return studentIds.flatMap((studentId) => {
       const student = this.store().users.find((user) => user.id === studentId);
       if (!student) {
         return [];
       }
-      return situations.map((situation) => {
-        const questions = this.questionsForSituation(situation.id);
+      return tasks.flatMap((task) => {
+        const situation = this.situationForTask(task);
+        if (!situation) {
+          return [];
+        }
+        const questions = this.questionsForTask(task);
         const answers = questions
           .map((question) => this.answerForQuestion(studentId, question.id))
           .filter((answer): answer is StudentAnswer => Boolean(answer));
-        return {
-          student,
-          situation,
-          progress: this.progressFor(studentId, situation.id),
-          correct: answers.filter((answer) => answer.isCorrect).length,
-          incorrect: answers.filter((answer) => !answer.isCorrect).length,
-          pending: Math.max(questions.length - answers.length, 0),
-        };
+        return [
+          {
+            student,
+            task,
+            situation,
+            progress: this.progressFor(studentId, task.id),
+            correct: answers.filter((answer) => answer.isCorrect).length,
+            incorrect: answers.filter((answer) => !answer.isCorrect).length,
+            pending: Math.max(questions.length - answers.length, 0),
+          },
+        ];
       });
     });
   }
@@ -328,18 +422,18 @@ export class AcademyDataService {
       .sort((a, b) => a.orderIndex - b.orderIndex);
   }
 
-  private recalculateProgress(studentId: string, situationId: string): void {
-    const questions = this.questionsForSituation(situationId);
+  private recalculateProgress(studentId: string, task: GroupTask): void {
+    const questions = this.questionsForTask(task);
     const answered = questions.filter((question) => this.answerForQuestion(studentId, question.id)).length;
     const percentage = questions.length ? Math.round((answered / questions.length) * 100) : 0;
     const now = new Date().toISOString();
     const existing = this.store().studentProgress.find(
-      (progress) => progress.studentId === studentId && progress.situationId === situationId,
+      (progress) => progress.studentId === studentId && progress.taskId === task.id,
     );
     const progress: StudentProgress = {
       id: existing?.id ?? this.id('prg'),
       studentId,
-      situationId,
+      taskId: task.id,
       progressPercentage: percentage,
       completed: percentage === 100,
       updatedAt: now,
@@ -378,10 +472,20 @@ export class AcademyDataService {
 
   private seedStore(): AcademyStore {
     const now = new Date().toISOString();
+    const superAdmin: User = {
+      id: 'usr-superadmin-demo',
+      name: 'Superadmin Demo',
+      email: 'superadmin@demo.edu',
+      password: 'demo123',
+      role: 'SUPERADMIN',
+      status: 'ACTIVE',
+      createdAt: now,
+      updatedAt: now,
+    };
     const teacher: User = {
       id: 'usr-teacher-demo',
-      name: 'Docente Demo',
-      email: 'docente@demo.edu',
+      name: 'Maestro Demo',
+      email: 'maestro@demo.edu',
       password: 'demo123',
       role: 'TEACHER',
       status: 'ACTIVE',
@@ -417,7 +521,7 @@ export class AcademyDataService {
         'Reconocer acciones iniciales eticas, tecnicas y psicosociales ante una situacion de alta criticidad.',
       difficulty: 'INTERMEDIATE',
       status: 'PUBLISHED',
-      teacherId: teacher.id,
+      createdById: superAdmin.id,
       createdAt: now,
       updatedAt: now,
     };
@@ -494,7 +598,7 @@ export class AcademyDataService {
       },
     ];
     return {
-      users: [teacher, student],
+      users: [superAdmin, teacher, student],
       teacherProfiles: [
         { id: 'tpr-demo', userId: teacher.id, institution: 'Universidad Demo', area: 'Psicologia', createdAt: now },
       ],
@@ -505,7 +609,16 @@ export class AcademyDataService {
       scenarios: [hospital, comisaria],
       questions,
       answerOptions,
-      groupSituations: [{ id: 'gsi-demo', groupId: group.id, situationId: situation.id, assignedAt: now }],
+      groupTasks: [
+        {
+          id: 'tsk-demo',
+          groupId: group.id,
+          situationId: situation.id,
+          scenarioIds: [hospital.id, comisaria.id],
+          questionIds: ['que-hospital-1', 'que-comisaria-1'],
+          assignedAt: now,
+        },
+      ],
       studentAnswers: [],
       studentProgress: [],
     };

@@ -561,3 +561,60 @@ meter {
     grid-template-columns: 1fr;
   }
 }
+
+.checklist-group {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.checklist-group h4 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 0.75rem;
+}
+
+.checklist-item input {
+  width: auto;
+  margin-top: 0.2rem;
+}
+
+.checklist-item span {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.checklist-item small {
+  color: var(--muted);
+}
+
+.checklist-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.task-summary {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.task-summary small {
+  color: var(--muted);
+}
+
+.form-hint {
+  margin: 0 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}

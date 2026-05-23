@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = join(fileURLToPath(new URL('..', import.meta.url)), 'dist', 'Psicologo', 'browser');
 const port = Number(process.env.PORT ?? 4200);
+const host = process.env.HOST ?? '0.0.0.0';
 
 const types = {
   '.css': 'text/css; charset=utf-8',
@@ -43,6 +44,6 @@ createServer((req, res) => {
   }
 
   sendFile(res, filePath);
-}).listen(port, () => {
-  console.log(`Servidor academico listo en http://127.0.0.1:${port}`);
+}).listen(port, host, () => {
+  console.log(`Servidor academico listo en http://${host}:${port}`);
 });

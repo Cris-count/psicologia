@@ -1,4 +1,4 @@
-export type UserRole = 'TEACHER' | 'STUDENT' | 'ADMIN';
+export type UserRole = 'SUPERADMIN' | 'TEACHER' | 'STUDENT';
 export type UserStatus = 'ACTIVE' | 'INACTIVE';
 export type GroupStatus = 'ACTIVE' | 'INACTIVE';
 export type SituationStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
@@ -56,7 +56,7 @@ export interface Situation {
   learningObjective: string;
   difficulty: Difficulty;
   status: SituationStatus;
-  teacherId: string;
+  createdById: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -91,10 +91,12 @@ export interface AnswerOption {
   nextQuestionId?: string;
 }
 
-export interface GroupSituation {
+export interface GroupTask {
   id: string;
   groupId: string;
   situationId: string;
+  scenarioIds: string[];
+  questionIds: string[];
   assignedAt: string;
 }
 
@@ -110,7 +112,7 @@ export interface StudentAnswer {
 export interface StudentProgress {
   id: string;
   studentId: string;
-  situationId: string;
+  taskId: string;
   progressPercentage: number;
   completed: boolean;
   updatedAt: string;
@@ -126,9 +128,16 @@ export interface AcademyStore {
   scenarios: Scenario[];
   questions: Question[];
   answerOptions: AnswerOption[];
-  groupSituations: GroupSituation[];
+  groupTasks: GroupTask[];
   studentAnswers: StudentAnswer[];
   studentProgress: StudentProgress[];
+}
+
+export interface TaskDraft {
+  groupId: string;
+  situationId: string;
+  scenarioIds: string[];
+  questionIds: string[];
 }
 
 export interface QuestionDraft {

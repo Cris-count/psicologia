@@ -36,7 +36,8 @@ import { AuthService } from '../services/auth.service';
 
           <div class="demo-box">
             <strong>Credenciales demo</strong>
-            <span>Docente: docente&#64;demo.edu / demo123</span>
+            <span>Superadmin: superadmin&#64;demo.edu / demo123</span>
+            <span>Maestro: maestro&#64;demo.edu / demo123</span>
             <span>Estudiante: estudiante&#64;demo.edu / demo123</span>
           </div>
         </form>
@@ -45,7 +46,7 @@ import { AuthService } from '../services/auth.service';
   `,
 })
 export class LoginPage {
-  email = 'docente@demo.edu';
+  email = 'maestro@demo.edu';
   password = 'demo123';
   error = '';
 

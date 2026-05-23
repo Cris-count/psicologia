@@ -132,7 +132,7 @@ async function main() {
       expression: `
         const email = document.querySelector('input[name="email"]');
         const password = document.querySelector('input[name="password"]');
-        email.value = 'docente@demo.edu';
+        email.value = 'maestro@demo.edu';
         password.value = 'demo123';
         email.dispatchEvent(new Event('input', { bubbles: true }));
         password.dispatchEvent(new Event('input', { bubbles: true }));

@@ -1,59 +1,86 @@
 # Psicologo
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.3.
+Simulador academico de casos con roles **Superadmin**, **Maestro** y **Estudiante** (Angular 21).
 
-## Development server
+## Credenciales demo
 
-To start a local development server, run:
+| Rol | Correo | Contrasena |
+|-----|--------|------------|
+| Superadmin | `superadmin@demo.edu` | `demo123` |
+| Maestro | `maestro@demo.edu` | `demo123` |
+| Estudiante | `estudiante@demo.edu` | `demo123` |
 
-```bash
-ng serve
-```
-
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Desarrollo local (sin Docker)
 
 ```bash
-ng generate component component-name
+pnpm install
+pnpm dev
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+Abre `http://localhost:4200`.
+
+## Docker
+
+Requisitos: [Docker Desktop](https://www.docker.com/products/docker-desktop/) (o Docker Engine + Compose v2).
+
+### Produccion
+
+Construye la imagen y levanta la app con **nginx** (SPA con rutas de Angular):
 
 ```bash
-ng generate --help
+docker compose build
+docker compose up -d
 ```
 
-## Building
+Abre **http://localhost:8080** (puerto configurable con `APP_PORT` en `.env`).
 
-To build the project run:
+Comandos utiles:
 
 ```bash
-ng build
+pnpm docker:build    # docker compose build
+pnpm docker:up       # docker compose up -d
+pnpm docker:down     # docker compose down
+pnpm docker:logs     # ver logs
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+### Desarrollo con hot-reload en Docker
 
 ```bash
-ng test
+pnpm docker:dev:build
 ```
 
-## Running end-to-end tests
+Abre **http://localhost:4200**. Los cambios en `src/` se recargan dentro del contenedor.
 
-For end-to-end (e2e) testing, run:
+### Variables de entorno
+
+Copia `.env.example` a `.env` si quieres cambiar puertos:
 
 ```bash
-ng e2e
+cp .env.example .env
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+| Variable | Default | Descripcion |
+|----------|---------|-------------|
+| `APP_PORT` | `8080` | Puerto host para produccion |
+| `DEV_PORT` | `4200` | Puerto host para desarrollo |
 
-## Additional Resources
+## Build manual
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+```bash
+pnpm build
+pnpm preview
+```
+
+## Tests
+
+```bash
+pnpm test
+```
+
+## Estructura Docker
+
+```
+Dockerfile           # Multi-stage: deps → build → production (nginx) / development
+docker-compose.yml   # Servicios psicologo (prod) y psicologo-dev (perfil dev)
+docker/nginx.conf    # SPA fallback para rutas de Angular
+```

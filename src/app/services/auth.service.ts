@@ -1,10 +1,10 @@
 import { isPlatformBrowser } from '@angular/common';
 import { Injectable, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { User } from '../models/academy.models';
+import { User, UserRole } from '../models/academy.models';
 import { AcademyDataService } from './academy-data.service';
 
-const SESSION_KEY = 'academic-case-simulator-session-v1';
+const SESSION_KEY = 'academic-case-simulator-session-v2';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -28,7 +28,7 @@ export class AuthService {
     if (this.isBrowser()) {
       localStorage.setItem(SESSION_KEY, user.id);
     }
-    void this.router.navigateByUrl(user.role === 'TEACHER' ? '/teacher' : '/student');
+    void this.router.navigateByUrl(this.homeRouteFor(user.role));
     return true;
   }
 
@@ -38,6 +38,17 @@ export class AuthService {
     }
     this.userState.set(null);
     void this.router.navigateByUrl('/login');
+  }
+
+  homeRouteFor(role: UserRole): string {
+    switch (role) {
+      case 'SUPERADMIN':
+        return '/superadmin';
+      case 'TEACHER':
+        return '/teacher';
+      default:
+        return '/student';
+    }
   }
 
   private restoreSession(): User | null {
