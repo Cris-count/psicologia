@@ -2,19 +2,19 @@
 
 :root {
   color-scheme: light;
-  --bg: #f6f7f4;
+  --bg: #f7f9fb;
   --surface: #ffffff;
-  --surface-soft: #eef4ef;
-  --ink: #19211d;
-  --muted: #607066;
-  --line: #dfe7e1;
-  --primary: #176b5b;
-  --primary-dark: #0f4c41;
-  --accent: #b45c3d;
-  --warning: #9b6a1c;
+  --surface-soft: #dbe2fa;
+  --ink: #191c1e;
+  --muted: #424656;
+  --line: #c2c6d8;
+  --primary: #0050cb;
+  --primary-dark: #003fa4;
+  --accent: #00626f;
+  --warning: #8a5d00;
   --danger: #a43b3b;
-  --success: #24744a;
-  --shadow: 0 18px 45px rgba(31, 49, 40, 0.09);
+  --success: #007d8d;
+  --shadow: 0 18px 45px rgba(0, 80, 203, 0.09);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
@@ -173,19 +173,37 @@ th {
   justify-content: space-between;
   gap: 1.25rem;
   border-right: 1px solid var(--line);
-  background: #15221d;
-  color: #edf5ef;
+  background:
+    linear-gradient(180deg, rgba(17, 24, 39, 0.96), rgba(30, 58, 138, 0.94)),
+    #111827;
+  color: #ffffff;
   padding: 1.4rem;
 }
 
 .sidebar .muted,
 .sidebar .eyebrow {
-  color: #bfd2c8;
+  color: #b3c5ff;
 }
 
 .sidebar h1 {
   margin: 0;
   font-size: 1.65rem;
+}
+
+.sidebar-brand,
+.student-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.app-logo {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 auto;
+  display: block;
+  filter: drop-shadow(0 10px 18px rgba(0, 102, 255, 0.28));
 }
 
 .sidebar nav {
@@ -198,7 +216,7 @@ th {
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: #edf5ef;
+  color: #eff1f3;
   padding: 0.7rem 0.8rem;
   text-align: left;
 }
@@ -208,8 +226,8 @@ th {
 }
 
 .sidebar nav button.active-nav {
-  background: #edf5ef;
-  color: #15221d;
+  background: #ffffff;
+  color: #0050cb;
 }
 
 .content,
@@ -421,6 +439,99 @@ th {
   font-size: clamp(2rem, 5vw, 4rem);
 }
 
+.student-flow {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 0 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.student-flow button {
+  max-width: 100%;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 0.85rem 1rem;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 800;
+}
+
+.student-flow button.active-nav {
+  border-bottom-color: var(--primary);
+  color: var(--primary);
+}
+
+.student-view {
+  display: grid;
+  gap: 1rem;
+}
+
+.student-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.group-entry-card {
+  min-height: 150px;
+}
+
+.entry-topline,
+.task-row,
+.task-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.entry-topline,
+.task-row {
+  justify-content: space-between;
+}
+
+.entry-topline small {
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--primary);
+  padding: 0.35rem 0.6rem;
+  font-weight: 800;
+}
+
+.task-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.task-row {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  padding: 1rem;
+  text-align: left;
+}
+
+.task-row:hover {
+  border-color: var(--primary);
+  box-shadow: 0 12px 28px rgba(0, 80, 203, 0.08);
+}
+
+.task-row span:first-child,
+.task-progress {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.task-progress {
+  min-width: 180px;
+}
+
 .student-grid {
   grid-template-columns: minmax(260px, 330px) minmax(0, 1fr);
 }
@@ -542,7 +653,8 @@ meter {
   }
 
   .page-header,
-  .student-header {
+  .student-header,
+  .section-heading {
     flex-direction: column;
   }
 
@@ -559,6 +671,16 @@ meter {
 
   .case-item {
     grid-template-columns: 1fr;
+  }
+
+  .task-row,
+  .entry-topline {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .task-progress {
+    width: 100%;
   }
 }
 

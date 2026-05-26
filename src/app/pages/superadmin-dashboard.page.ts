@@ -12,8 +12,13 @@ import { AuthService } from '../services/auth.service';
     <div class="app-shell">
       <aside class="sidebar">
         <div>
-          <p class="eyebrow">Superadmin</p>
-          <h1>Catalogo academico</h1>
+          <div class="sidebar-brand">
+            <img class="app-logo" src="/psych-simulator-logo.svg" alt="" aria-hidden="true" />
+            <div>
+              <p class="eyebrow">Superadmin</p>
+              <h1>Catalogo academico</h1>
+            </div>
+          </div>
           <p class="muted">Genera situaciones, escenarios y preguntas. El maestro las vincula en sus tareas.</p>
         </div>
         <nav>

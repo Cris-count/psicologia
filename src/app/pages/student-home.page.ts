@@ -12,47 +12,92 @@ import { AuthService } from '../services/auth.service';
     <div class="student-shell">
       <header class="student-header">
         <div>
-          <p class="eyebrow">Estudiante</p>
-          <h1>Mis grupos</h1>
-          <p>Responde las tareas que tu maestro armo con situaciones, escenarios y preguntas seleccionadas.</p>
+          <div class="student-brand">
+            <img class="app-logo" src="/psych-simulator-logo.svg" alt="" aria-hidden="true" />
+            <div>
+              <p class="eyebrow">Estudiante</p>
+              <h1>{{ pageTitle() }}</h1>
+            </div>
+          </div>
+          <p>{{ pageIntro() }}</p>
         </div>
         <button class="ghost-button" type="button" (click)="auth.logout()">Cerrar sesion</button>
       </header>
 
-      <section class="student-grid">
-        <aside class="panel">
-          <h2>Grupos</h2>
-          <div class="card-list">
+      <nav class="student-flow" aria-label="Navegacion del estudiante">
+        <button type="button" class="active-nav" (click)="goBackInFlow()">{{ currentMenuLabel() }}</button>
+      </nav>
+
+      @if (view === 'groups') {
+        <section class="student-view">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Menu de grupos</p>
+              <h2>Grupos inscritos</h2>
+            </div>
+            <p>Selecciona un grupo para ver las tareas que tu profesor asigno.</p>
+          </div>
+
+          <div class="student-card-grid">
             @for (group of groups(); track group.id) {
-              <button class="classroom-card" type="button" (click)="selectGroup(group.id)">
-                <strong>{{ group.name }}</strong>
+              <button class="classroom-card group-entry-card" type="button" (click)="openGroup(group.id)">
+                <span class="entry-topline">
+                  <strong>{{ group.name }}</strong>
+                  <small>{{ pendingTasksForGroup(group.id) }} pendientes</small>
+                </span>
                 <span>{{ group.description }}</span>
                 <small>{{ tasksForGroup(group.id).length }} tareas asignadas</small>
               </button>
             } @empty {
-              <p class="muted">Aun no perteneces a ningun grupo.</p>
+              <article class="panel">
+                <p class="muted">Aun no perteneces a ningun grupo.</p>
+              </article>
             }
           </div>
-        </aside>
+        </section>
+      }
 
-        <main class="learning-area">
+      @if (view === 'tasks') {
+        <section class="student-view">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Grupo seleccionado</p>
+              <h2>{{ selectedGroup()?.name ?? 'Tareas' }}</h2>
+            </div>
+            <button class="ghost-button" type="button" (click)="showGroups()">Volver a grupos</button>
+          </div>
+
           <section class="panel">
-            <h2>Tareas asignadas</h2>
-            <div class="situation-strip">
+            <h2>Listado de tareas pendientes</h2>
+            <div class="task-list">
               @for (task of tasks(); track task.id) {
-                <button class="situation-card" type="button" (click)="selectedTaskId = task.id">
-                  <strong>{{ taskTitle(task) }}</strong>
+                <button class="task-row" type="button" (click)="openTask(task.id)">
                   <span>
-                    {{ task.scenarioIds.length }} escenarios · {{ task.questionIds.length }} preguntas
+                    <strong>{{ taskTitle(task) }}</strong>
+                    <small>{{ task.scenarioIds.length }} escenarios - {{ task.questionIds.length }} preguntas</small>
                   </span>
-                  <meter min="0" max="100" [value]="progress(task.id).progressPercentage"></meter>
-                  <small>Avance {{ progress(task.id).progressPercentage }}%</small>
+                  <span class="task-progress">
+                    <meter min="0" max="100" [value]="progress(task.id).progressPercentage"></meter>
+                    <small>{{ taskState(task.id) }}</small>
+                  </span>
                 </button>
               } @empty {
-                <p class="muted">Selecciona un grupo con tareas asignadas por tu maestro.</p>
+                <p class="muted">Este grupo aun no tiene tareas asignadas.</p>
               }
             </div>
           </section>
+        </section>
+      }
+
+      @if (view === 'task') {
+        <section class="student-view">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">{{ selectedGroup()?.name ?? 'Ejercicio' }}</p>
+              <h2>{{ selectedTask() ? taskTitle(selectedTask()!) : 'Tarea' }}</h2>
+            </div>
+            <button class="ghost-button" type="button" (click)="showTasks()">Volver a tareas</button>
+          </div>
 
           @if (selectedTask(); as task) {
             @if (selectedSituation(task); as situation) {
@@ -101,21 +146,49 @@ import { AuthService } from '../services/auth.service';
               </section>
             }
           }
-        </main>
-      </section>
+        </section>
+      }
     </div>
   `,
 })
 export class StudentHomePage {
+  view: 'groups' | 'tasks' | 'task' = 'groups';
   selectedGroupId = '';
   selectedTaskId = '';
 
   constructor(
     public readonly data: AcademyDataService,
     public readonly auth: AuthService,
-  ) {
-    this.selectedGroupId = this.groups()[0]?.id ?? '';
-    this.selectedTaskId = this.tasks()[0]?.id ?? '';
+  ) {}
+
+  pageTitle(): string {
+    if (this.view === 'task') {
+      return 'Resolver tarea';
+    }
+    if (this.view === 'tasks') {
+      return 'Tareas del grupo';
+    }
+    return 'Mis grupos';
+  }
+
+  pageIntro(): string {
+    if (this.view === 'task') {
+      return 'Lee el caso, revisa cada escenario y responde las preguntas asignadas.';
+    }
+    if (this.view === 'tasks') {
+      return 'Elige una tarea pendiente para abrir el ejercicio completo.';
+    }
+    return 'Primero selecciona uno de los grupos donde tu profesor te inscribio.';
+  }
+
+  currentMenuLabel(): string {
+    if (this.view === 'task' && this.selectedTask()) {
+      return this.taskTitle(this.selectedTask()!);
+    }
+    if ((this.view === 'tasks' || this.view === 'task') && this.selectedGroup()) {
+      return this.selectedGroup()!.name;
+    }
+    return 'Grupos';
   }
 
   student(): User | null {
@@ -132,17 +205,53 @@ export class StudentHomePage {
     return student ? this.data.tasksForStudentInGroup(student.id, groupId) : [];
   }
 
-  selectGroup(groupId: string): void {
+  openGroup(groupId: string): void {
     this.selectedGroupId = groupId;
-    this.selectedTaskId = this.tasks()[0]?.id ?? '';
+    this.selectedTaskId = '';
+    this.view = 'tasks';
+  }
+
+  openTask(taskId: string): void {
+    this.selectedTaskId = taskId;
+    this.view = 'task';
+  }
+
+  showGroups(): void {
+    this.view = 'groups';
+  }
+
+  showTasks(): void {
+    if (this.selectedGroupId) {
+      this.view = 'tasks';
+    }
+  }
+
+  showTask(): void {
+    if (this.selectedTaskId) {
+      this.view = 'task';
+    }
+  }
+
+  goBackInFlow(): void {
+    if (this.view === 'task') {
+      this.showTasks();
+      return;
+    }
+    if (this.view === 'tasks') {
+      this.showGroups();
+    }
   }
 
   tasks(): GroupTask[] {
     return this.selectedGroupId ? this.tasksForGroup(this.selectedGroupId) : [];
   }
 
+  selectedGroup(): GameGroup | undefined {
+    return this.groups().find((group) => group.id === this.selectedGroupId);
+  }
+
   selectedTask(): GroupTask | undefined {
-    return this.tasks().find((task) => task.id === this.selectedTaskId) ?? this.tasks()[0];
+    return this.tasks().find((task) => task.id === this.selectedTaskId);
   }
 
   selectedSituation(task: GroupTask) {
@@ -178,5 +287,14 @@ export class StudentHomePage {
     return student
       ? this.data.progressFor(student.id, taskId)
       : { progressPercentage: 0, completed: false, id: '', studentId: '', taskId, updatedAt: '' };
+  }
+
+  taskState(taskId: string): string {
+    const progress = this.progress(taskId);
+    return progress.completed ? 'Completada' : `Pendiente ${progress.progressPercentage}%`;
+  }
+
+  pendingTasksForGroup(groupId: string): number {
+    return this.tasksForGroup(groupId).filter((task) => !this.progress(task.id).completed).length;
   }
 }
