@@ -1,6 +1,8 @@
-# Psicologo
+# MIND-SPHERE
 
-Simulador academico de casos con roles **Superadmin**, **Maestro** y **Estudiante** (Angular 21).
+Simulador psicológico futurista premium con roles **Superadmin**, **Maestro** y **Estudiante** (Angular 21).
+
+El asistente guía oficial del simulador es **GARY**.
 
 ## Credenciales demo
 
@@ -18,6 +20,20 @@ pnpm dev
 ```
 
 Abre `http://localhost:4200`.
+
+### Panel administrador (Fase 1 — REQ-01 + Figma)
+
+Tras iniciar sesión como Superadmin (`superadmin@demo.edu` / `demo123`):
+
+| Ruta | Sección |
+|------|---------|
+| `/admin/resumen` | Dashboard plataforma (Figma Neo) |
+| `/admin/usuarios` | Gestión de usuarios y flag *creador de casos* (REQ-01) |
+| `/admin/licencias` | Control de licencias |
+| `/admin/reportes` | Uso institucional |
+| `/admin/logs` | System logs |
+
+Documentación: `docs/admin/FASE-1-ESPECIFICACION.md`, requisitos en `docs/notion/export/`, diseño en `docs/figma/admin-dashboard-neo.png`.
 
 ## Docker
 

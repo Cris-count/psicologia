@@ -3,6 +3,7 @@ import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
 import {
   AcademyStore,
   AnswerOption,
+  AvatarId,
   Difficulty,
   GameGroup,
   GroupTask,
@@ -15,6 +16,8 @@ import {
   SituationStatus,
   StudentAnswer,
   StudentProgress,
+  SituationDraft,
+  ScenarioDraft,
   TaskDraft,
   User,
 } from '../models/academy.models';
@@ -56,9 +59,238 @@ export class AcademyDataService {
     return this.store().users.filter((user) => user.role === 'STUDENT');
   }
 
-  /** Catálogo publicado por el superadmin, visible para maestros al crear tareas. */
+  allTeachers(): User[] {
+    return this.store().users.filter((user) => user.role === 'TEACHER');
+  }
+
+  teacherProfileFor(userId: string) {
+    return this.store().teacherProfiles.find((profile) => profile.userId === userId);
+  }
+
+  createTeacher(
+    name: string,
+    email: string,
+    password: string,
+    institution: string,
+    area: string,
+    canCreateCases: boolean,
+  ): User {
+    const now = new Date().toISOString();
+    const user: User = {
+      id: this.id('usr'),
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      password,
+      role: 'TEACHER',
+      status: 'ACTIVE',
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.commit({
+      ...this.store(),
+      users: [user, ...this.store().users],
+      teacherProfiles: [
+        {
+          id: this.id('tpr'),
+          userId: user.id,
+          institution: institution.trim(),
+          area: area.trim(),
+          canCreateCases,
+          createdAt: now,
+        },
+        ...this.store().teacherProfiles,
+      ],
+    });
+    return user;
+  }
+
+  setUserStatus(userId: string, status: 'ACTIVE' | 'INACTIVE'): void {
+    this.commit({
+      ...this.store(),
+      users: this.store().users.map((user) =>
+        user.id === userId ? { ...user, status, updatedAt: new Date().toISOString() } : user,
+      ),
+    });
+  }
+
+  setTeacherCanCreateCases(userId: string, canCreateCases: boolean): void {
+    this.commit({
+      ...this.store(),
+      teacherProfiles: this.store().teacherProfiles.map((profile) =>
+        profile.userId === userId ? { ...profile, canCreateCases } : profile,
+      ),
+    });
+  }
+
+  isEmergencyLockoutActive(): boolean {
+    return Boolean(this.store().platformSettings?.emergencyLockout);
+  }
+
+  setEmergencyLockout(active: boolean): void {
+    this.commit({
+      ...this.store(),
+      platformSettings: {
+        ...this.store().platformSettings,
+        emergencyLockout: active,
+        updatedAt: new Date().toISOString(),
+      },
+    });
+  }
+
+  /** Catálogo publicado visible para maestros al crear tareas. */
   catalogSituations(): Situation[] {
     return this.store().situations.filter((situation) => situation.status === 'PUBLISHED');
+  }
+
+  /** Casos publicados disponibles para un maestro (propios + catálogo global). */
+  catalogSituationsForTeacher(teacherId: string): Situation[] {
+    const userIds = new Set(this.store().users.map((u) => u.id));
+    return this.store().situations.filter((situation) => {
+      if (situation.status !== 'PUBLISHED') return false;
+      if (situation.createdById === teacherId) return true;
+      const creator = this.store().users.find((u) => u.id === situation.createdById);
+      return creator?.role === 'SUPERADMIN';
+    });
+  }
+
+  situationsByTeacher(teacherId: string): Situation[] {
+    return this.store()
+      .situations.filter((s) => s.createdById === teacherId)
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+
+  canTeacherCreateCases(teacherId: string): boolean {
+    return Boolean(this.teacherProfileFor(teacherId)?.canCreateCases);
+  }
+
+  getSituation(situationId: string): Situation | undefined {
+    return this.store().situations.find((s) => s.id === situationId);
+  }
+
+  createSituationForTeacher(teacherId: string, draft: SituationDraft): Situation | undefined {
+    if (!this.canTeacherCreateCases(teacherId)) return undefined;
+    const now = new Date().toISOString();
+    const situation: Situation = {
+      id: this.id('sit'),
+      title: draft.title.trim(),
+      description: draft.description.trim(),
+      context: draft.context.trim(),
+      learningObjective: draft.learningObjective.trim(),
+      difficulty: draft.difficulty,
+      category: draft.category,
+      status: 'DRAFT',
+      createdById: teacherId,
+      resources: draft.resources?.trim() ?? '',
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.commit({ ...this.store(), situations: [situation, ...this.store().situations] });
+    return situation;
+  }
+
+  updateSituation(situationId: string, draft: Partial<SituationDraft>): void {
+    this.commit({
+      ...this.store(),
+      situations: this.store().situations.map((s) =>
+        s.id === situationId
+          ? {
+              ...s,
+              ...draft,
+              title: draft.title?.trim() ?? s.title,
+              description: draft.description?.trim() ?? s.description,
+              context: draft.context?.trim() ?? s.context,
+              learningObjective: draft.learningObjective?.trim() ?? s.learningObjective,
+              resources: draft.resources?.trim() ?? s.resources,
+              updatedAt: new Date().toISOString(),
+            }
+          : s,
+      ),
+    });
+  }
+
+  deleteSituation(situationId: string): boolean {
+    const inUse = this.store().groupTasks.some((t) => t.situationId === situationId);
+    if (inUse) return false;
+    const scenarioIds = new Set(this.scenariosForSituation(situationId).map((s) => s.id));
+    const questionIds = new Set(
+      this.store().questions.filter((q) => scenarioIds.has(q.scenarioId)).map((q) => q.id),
+    );
+    this.commit({
+      ...this.store(),
+      situations: this.store().situations.filter((s) => s.id !== situationId),
+      scenarios: this.store().scenarios.filter((s) => s.situationId !== situationId),
+      questions: this.store().questions.filter((q) => !questionIds.has(q.id)),
+      answerOptions: this.store().answerOptions.filter((o) => !questionIds.has(o.questionId)),
+    });
+    return true;
+  }
+
+  setSituationEnabled(situationId: string, enabled: boolean): void {
+    this.updateSituationStatus(situationId, enabled ? 'PUBLISHED' : 'DRAFT');
+  }
+
+  updateScenario(scenarioId: string, draft: Partial<ScenarioDraft>): void {
+    this.commit({
+      ...this.store(),
+      scenarios: this.store().scenarios.map((s) =>
+        s.id === scenarioId
+          ? {
+              ...s,
+              title: draft.title?.trim() ?? s.title,
+              context: draft.context?.trim() ?? s.context,
+              instructions: draft.instructions?.trim() ?? s.instructions,
+            }
+          : s,
+      ),
+    });
+  }
+
+  deleteScenario(scenarioId: string): void {
+    const questionIds = new Set(this.questionsForScenario(scenarioId).map((q) => q.id));
+    this.commit({
+      ...this.store(),
+      scenarios: this.store().scenarios.filter((s) => s.id !== scenarioId),
+      questions: this.store().questions.filter((q) => !questionIds.has(q.id)),
+      answerOptions: this.store().answerOptions.filter((o) => !questionIds.has(o.questionId)),
+    });
+  }
+
+  deleteQuestion(questionId: string): void {
+    this.commit({
+      ...this.store(),
+      questions: this.store().questions.filter((q) => q.id !== questionId),
+      answerOptions: this.store().answerOptions.filter((o) => o.questionId !== questionId),
+    });
+  }
+
+  updateStudent(userId: string, name: string, email: string, code: string): void {
+    const now = new Date().toISOString();
+    this.commit({
+      ...this.store(),
+      users: this.store().users.map((u) =>
+        u.id === userId ? { ...u, name: name.trim(), email: email.trim().toLowerCase(), updatedAt: now } : u,
+      ),
+      studentProfiles: this.store().studentProfiles.map((p) =>
+        p.userId === userId ? { ...p, code: code.trim() || p.code } : p,
+      ),
+    });
+  }
+
+  teacherStats(teacherId: string) {
+    const cases = this.situationsByTeacher(teacherId);
+    const groups = this.groupsByTeacher(teacherId);
+    const students = this.studentsByTeacher(teacherId);
+    const groupIds = new Set(groups.map((g) => g.id));
+    const tasks = this.store().groupTasks.filter((t) => groupIds.has(t.groupId));
+    return {
+      totalCases: cases.length,
+      publishedCases: cases.filter((c) => c.status === 'PUBLISHED').length,
+      draftCases: cases.filter((c) => c.status === 'DRAFT').length,
+      groups: groups.length,
+      students: students.length,
+      tasks: tasks.length,
+      activeCases: cases.filter((c) => c.status === 'PUBLISHED').length,
+    };
   }
 
   /** Escenarios publicados del catalogo (pertenecen a situaciones publicadas). */
@@ -122,7 +354,15 @@ export class AcademyDataService {
       ...this.store(),
       users: [user, ...this.store().users],
       studentProfiles: [
-        { id: this.id('spr'), userId: user.id, code: code.trim() || `EST-${Date.now()}`, createdAt: now },
+        {
+          id: this.id('spr'),
+          userId: user.id,
+          code: code.trim() || `EST-${Date.now()}`,
+          nickname: '',
+          avatarId: 'neural-01',
+          onboardingCompleted: false,
+          createdAt: now,
+        },
         ...this.store().studentProfiles,
       ],
     });
@@ -162,6 +402,7 @@ export class AcademyDataService {
       context: context.trim(),
       learningObjective: learningObjective.trim(),
       difficulty,
+      category: 'CLINICAL',
       status: 'DRAFT',
       createdById: superAdminId,
       createdAt: now,
@@ -193,9 +434,55 @@ export class AcademyDataService {
     this.commit({ ...this.store(), scenarios: [...this.store().scenarios, scenario] });
   }
 
+  studentProfileFor(userId: string) {
+    return this.store().studentProfiles.find((profile) => profile.userId === userId);
+  }
+
+  isNicknameAvailable(nickname: string, excludeUserId?: string): boolean {
+    const normalized = nickname.trim().toLowerCase();
+    if (normalized.length < 3) return false;
+    return !this.store().studentProfiles.some(
+      (p) =>
+        p.nickname?.trim().toLowerCase() === normalized &&
+        (!excludeUserId || p.userId !== excludeUserId),
+    );
+  }
+
+  updateStudentGameProfile(
+    userId: string,
+    patch: { nickname?: string; avatarId?: AvatarId; onboardingCompleted?: boolean },
+  ): boolean {
+    const profile = this.studentProfileFor(userId);
+    if (!profile) return false;
+    if (patch.nickname !== undefined) {
+      const nick = patch.nickname.trim();
+      if (nick.length < 3 || !this.isNicknameAvailable(nick, userId)) return false;
+    }
+    const now = new Date().toISOString();
+    this.commit({
+      ...this.store(),
+      studentProfiles: this.store().studentProfiles.map((p) =>
+        p.userId === userId
+          ? {
+              ...p,
+              ...patch,
+              nickname: patch.nickname !== undefined ? patch.nickname.trim() : p.nickname,
+              updatedAt: now,
+            }
+          : p,
+      ),
+    });
+    return true;
+  }
+
+  deleteStudent(userId: string): void {
+    this.setUserStatus(userId, 'INACTIVE');
+  }
+
   createQuestion(scenarioId: string, draft: QuestionDraft): void {
     const cleanOptions = draft.options.map((option) => option.trim()).filter(Boolean);
-    if (cleanOptions.length < 2 || draft.correctIndex < 0 || draft.correctIndex >= cleanOptions.length) {
+    const minOptions = draft.questionType === 'OPEN' ? 1 : 2;
+    if (cleanOptions.length < minOptions || draft.correctIndex < 0 || draft.correctIndex >= cleanOptions.length) {
       return;
     }
     const questionId = this.id('que');
@@ -205,6 +492,8 @@ export class AcademyDataService {
       scenarioId,
       statement: draft.statement.trim(),
       category: draft.category,
+      questionType: draft.questionType ?? 'MULTIPLE_CHOICE',
+      points: draft.points ?? 10,
       orderIndex,
       feedback: draft.feedback.trim(),
       createdAt: new Date().toISOString(),
@@ -461,13 +750,43 @@ export class AcademyDataService {
     }
     const saved = localStorage.getItem(STORE_KEY);
     if (saved) {
-      return JSON.parse(saved) as AcademyStore;
+      return this.normalizeStore(JSON.parse(saved) as AcademyStore);
     }
     return this.seedStore();
   }
 
   private isBrowser(): boolean {
     return isPlatformBrowser(this.platformId);
+  }
+
+  private normalizeStore(store: AcademyStore): AcademyStore {
+    return {
+      ...store,
+      situations: store.situations.map((s) => ({
+        ...s,
+        category: s.category ?? 'CLINICAL',
+        resources: s.resources ?? '',
+      })),
+      questions: store.questions.map((q) => ({
+        ...q,
+        questionType: q.questionType ?? 'MULTIPLE_CHOICE',
+        points: q.points ?? 10,
+      })),
+      teacherProfiles: store.teacherProfiles.map((profile) => ({
+        ...profile,
+        canCreateCases: profile.canCreateCases ?? false,
+      })),
+      studentProfiles: store.studentProfiles.map((p) => ({
+        ...p,
+        nickname: p.nickname ?? '',
+        avatarId: p.avatarId ?? 'neural-01',
+        onboardingCompleted: p.onboardingCompleted ?? false,
+      })),
+      platformSettings: store.platformSettings ?? {
+        emergencyLockout: false,
+        updatedAt: new Date().toISOString(),
+      },
+    };
   }
 
   private seedStore(): AcademyStore {
@@ -520,6 +839,7 @@ export class AcademyDataService {
       learningObjective:
         'Reconocer acciones iniciales eticas, tecnicas y psicosociales ante una situacion de alta criticidad.',
       difficulty: 'INTERMEDIATE',
+      category: 'CRISIS',
       status: 'PUBLISHED',
       createdById: superAdmin.id,
       createdAt: now,
@@ -551,6 +871,8 @@ export class AcademyDataService {
         scenarioId: hospital.id,
         statement: 'Ante urgencia vital y crisis emocional, cual debe ser la primera prioridad del equipo?',
         category: 'TECHNICAL',
+        questionType: 'MULTIPLE_CHOICE',
+        points: 10,
         orderIndex: 1,
         feedback:
           'La prioridad inicial es preservar la vida, estabilizar y acompanar emocionalmente con comunicacion clara y respetuosa.',
@@ -561,6 +883,8 @@ export class AcademyDataService {
         scenarioId: comisaria.id,
         statement: 'Que accion evita revictimizacion durante la orientacion inicial?',
         category: 'PSYCHOSOCIAL',
+        questionType: 'MULTIPLE_CHOICE',
+        points: 10,
         orderIndex: 1,
         feedback:
           'La escucha respetuosa, la explicacion de opciones y la reduccion de relatos repetidos ayudan a proteger a la persona.',
@@ -600,9 +924,27 @@ export class AcademyDataService {
     return {
       users: [superAdmin, teacher, student],
       teacherProfiles: [
-        { id: 'tpr-demo', userId: teacher.id, institution: 'Universidad Demo', area: 'Psicologia', createdAt: now },
+        {
+          id: 'tpr-demo',
+          userId: teacher.id,
+          institution: 'Universidad Demo',
+          area: 'Psicologia',
+          canCreateCases: true,
+          createdAt: now,
+        },
       ],
-      studentProfiles: [{ id: 'spr-demo', userId: student.id, code: 'EST-001', createdAt: now }],
+      platformSettings: { emergencyLockout: false, updatedAt: now },
+      studentProfiles: [
+        {
+          id: 'spr-demo',
+          userId: student.id,
+          code: 'EST-001',
+          nickname: '',
+          avatarId: 'neural-01',
+          onboardingCompleted: false,
+          createdAt: now,
+        },
+      ],
       groups: [group],
       groupStudents: [{ id: 'gst-demo', groupId: group.id, studentId: student.id, joinedAt: now }],
       situations: [situation],

@@ -1,0 +1,72 @@
+/**
+ * MIND-SPHERE — Tokens inspirados en Match Villains
+ * Violeta profundo · oro premium · joyas suaves · mobile AAA elegante
+ */
+:root {
+  --psy-primary: #6b8cff;
+  --psy-primary-dark: #4a6fd4;
+  --psy-primary-bright: #8aa4ff;
+  --psy-accent: #d65db1;
+  --psy-accent-soft: #e889c8;
+  --psy-purple: #7b5cbf;
+  --psy-purple-deep: #5c3d99;
+  --psy-pink: #e878a8;
+  --psy-gold: #f4c542;
+  --psy-gold-dark: #d4a82e;
+  --psy-gold-bright: #ffe082;
+  --psy-neural: #9b8fd9;
+  --psy-cortex: #8b7ec8;
+
+  --psy-bg: #13102a;
+  --psy-bg-mid: #1a1535;
+  --psy-bg-soft: #221c42;
+  --psy-surface: rgba(34, 28, 66, 0.88);
+  --psy-surface-raised: rgba(42, 36, 78, 0.92);
+  --psy-surface-soft: rgba(107, 140, 255, 0.06);
+  --psy-glass: rgba(255, 255, 255, 0.04);
+
+  --psy-ink: #f4f0fa;
+  --psy-muted: #b8aed4;
+  --psy-line: rgba(155, 143, 217, 0.18);
+  --psy-border-gold: rgba(244, 197, 66, 0.38);
+  --psy-border-neural: rgba(155, 143, 217, 0.28);
+
+  --psy-warning: #f5a623;
+  --psy-danger: #e86a7a;
+  --psy-success: #52c9a8;
+
+  --psy-shadow: 0 6px 0 rgba(0, 0, 0, 0.28), 0 12px 36px rgba(19, 16, 42, 0.45);
+  --psy-shadow-sm: 0 3px 0 rgba(0, 0, 0, 0.22), 0 8px 24px rgba(19, 16, 42, 0.35);
+  --psy-shadow-glow-blue: 0 0 20px rgba(107, 140, 255, 0.22);
+  --psy-shadow-glow-gold: 0 0 18px rgba(244, 197, 66, 0.2);
+  --psy-shadow-glow-cyan: 0 0 22px rgba(214, 93, 177, 0.15);
+  --psy-shadow-glow-neural: 0 0 18px rgba(155, 143, 217, 0.18);
+
+  --psy-radius-sm: 12px;
+  --psy-radius: 18px;
+  --psy-radius-lg: 24px;
+  --psy-radius-pill: 999px;
+
+  --psy-font-display: 'Fredoka', 'Nunito', ui-sans-serif, sans-serif;
+  --psy-font-body: 'Nunito', ui-sans-serif, system-ui, sans-serif;
+  --psy-font-hud: 'Orbitron', 'Nunito', ui-sans-serif, sans-serif;
+  --psy-font-sans: var(--psy-font-body);
+
+  --psy-content-max: 1440px;
+  --psy-sidebar-from: #16122e;
+  --psy-sidebar-to: #221c42;
+
+  --bg: var(--psy-bg);
+  --surface: var(--psy-surface-raised);
+  --surface-soft: var(--psy-surface-soft);
+  --ink: var(--psy-ink);
+  --muted: var(--psy-muted);
+  --line: var(--psy-line);
+  --primary: var(--psy-primary);
+  --primary-dark: var(--psy-primary-dark);
+  --accent: var(--psy-accent);
+  --warning: var(--psy-warning);
+  --danger: var(--psy-danger);
+  --success: var(--psy-success);
+  --shadow: var(--psy-shadow);
+}

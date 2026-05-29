@@ -1,1 +1,4 @@
-<router-outlet />
+<app-game-loader />
+<div class="game-viewport" [class.is-entering]="transitioning">
+  <router-outlet (activate)="onActivate()" />
+</div>

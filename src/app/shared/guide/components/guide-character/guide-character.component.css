@@ -1,0 +1,287 @@
+/* ── GARY · integrado al entorno (sin marco rectangular) ── */
+
+.nexa-anchor {
+  position: relative;
+  pointer-events: none;
+  user-select: none;
+  overflow: visible;
+}
+
+/* Stage = personaje en escena del login, sin contenedor visible */
+.nexa-anchor.presentation-stage {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.nexa-anchor.presentation-assistant .nexa-blink-lid.lid-left {
+  top: 22%;
+  left: 35%;
+  width: 9%;
+  height: 2.5%;
+}
+
+.nexa-anchor.presentation-assistant .nexa-blink-lid.lid-right {
+  top: 22%;
+  left: 51%;
+  width: 9%;
+  height: 2.5%;
+}
+
+.nexa-anchor.presentation-assistant {
+  width: 100%;
+  height: 100%;
+  max-width: 280px;
+  max-height: 360px;
+  flex-shrink: 0;
+}
+
+.nexa-atmosphere-compact .nexa-neural-ring {
+  top: 12%;
+  right: 0;
+  width: 40%;
+}
+
+.nexa-atmosphere-compact .nexa-neural-ring.ring-2 {
+  width: 48%;
+  top: 8%;
+}
+
+.nexa-anchor.presentation-companion {
+  width: 148px;
+  height: 176px;
+}
+
+.nexa-anchor.presentation-chip {
+  width: 76px;
+  height: 96px;
+}
+
+/* ── Atmósfera neural (convive con three-background) ── */
+.nexa-atmosphere {
+  position: absolute;
+  inset: -15% -10% -5%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.nexa-fog {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.25;
+}
+
+.nexa-fog-low {
+  bottom: 5%;
+  left: 10%;
+  width: 80%;
+  height: 30%;
+  background: radial-gradient(ellipse, rgba(79, 195, 255, 0.2), transparent 70%);
+}
+
+.nexa-fog-mid {
+  top: 20%;
+  right: 0;
+  width: 50%;
+  height: 40%;
+  background: radial-gradient(circle, rgba(123, 92, 191, 0.15), transparent 68%);
+}
+
+.nexa-neural-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(79, 195, 255, 0.2);
+  top: 18%;
+  right: 8%;
+  width: 28%;
+  aspect-ratio: 1;
+}
+
+.nexa-neural-ring.ring-2 {
+  width: 36%;
+  top: 14%;
+  right: 4%;
+  border-color: rgba(214, 93, 177, 0.15);
+  border-style: dashed;
+}
+
+.nexa-particle {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #4fc3ff;
+  box-shadow: 0 0 8px #4fc3ff;
+  opacity: 0.45;
+}
+
+.nexa-particle.p2 { background: #d65db1; box-shadow: 0 0 8px #d65db1; }
+.nexa-particle.p3 { background: #f4c542; box-shadow: 0 0 6px #f4c542; width: 2px; height: 2px; }
+.nexa-particle.p4 { background: #4fc3ff; width: 2px; height: 2px; }
+.nexa-particle.p5 { background: #9b8fd9; box-shadow: 0 0 6px #9b8fd9; }
+.nexa-particle.p6 { background: #52c9a8; width: 2px; height: 2px; }
+
+/* ── Rig del personaje ── */
+.nexa-rig {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  will-change: transform;
+}
+
+.nexa-rig-body {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  transform-origin: 50% 88%;
+  will-change: transform;
+}
+
+.nexa-sprite {
+  width: auto;
+  height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  display: block;
+  filter: drop-shadow(0 8px 24px rgba(79, 195, 255, 0.12)) drop-shadow(0 20px 40px rgba(0, 0, 0, 0.5));
+}
+
+/* Capa cabello — sway sutil sobre zona superior */
+.nexa-rig-hair {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 55%;
+  height: 38%;
+  background: linear-gradient(180deg, rgba(79, 195, 255, 0.04), transparent);
+  clip-path: ellipse(50% 60% at 50% 80%);
+  pointer-events: none;
+  transform-origin: 50% 90%;
+  z-index: 4;
+}
+
+/* Parpadeo */
+.nexa-blink-lids {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.nexa-blink-lid {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(12, 10, 28, 0.75);
+  transform: scaleY(0);
+  transform-origin: center;
+}
+
+.presentation-stage .nexa-blink-lid.lid-left {
+  top: 21%;
+  left: 36%;
+  width: 7%;
+  height: 2.2%;
+}
+
+.presentation-stage .nexa-blink-lid.lid-right {
+  top: 21%;
+  left: 52%;
+  width: 7%;
+  height: 2.2%;
+}
+
+.presentation-companion .nexa-blink-lid.lid-left,
+.presentation-chip .nexa-blink-lid.lid-left {
+  top: 24%;
+  left: 34%;
+  width: 10%;
+  height: 3%;
+}
+
+.presentation-companion .nexa-blink-lid.lid-right,
+.presentation-chip .nexa-blink-lid.lid-right {
+  top: 24%;
+  left: 52%;
+  width: 10%;
+  height: 3%;
+}
+
+/* Sombra de contacto con el suelo */
+.nexa-contact-shadow {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 65%;
+  height: 6%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.55), transparent 70%);
+  filter: blur(8px);
+  z-index: 1;
+  opacity: 0.45;
+}
+
+/* Orbe holográfico (refuerza el cerebro de la ilustración) */
+.nexa-holo-orb {
+  position: absolute;
+  top: 26%;
+  right: 14%;
+  width: 16%;
+  aspect-ratio: 1;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+}
+
+.nexa-holo-core {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(79, 195, 255, 0.5), transparent 65%);
+  filter: blur(2px);
+}
+
+.nexa-holo-orb svg {
+  position: absolute;
+  width: 70%;
+  height: 70%;
+}
+
+.presentation-companion .nexa-atmosphere,
+.presentation-chip .nexa-atmosphere,
+.presentation-companion .nexa-holo-orb,
+.presentation-chip .nexa-holo-orb,
+.presentation-companion .nexa-rig-hair,
+.presentation-chip .nexa-rig-hair {
+  display: none;
+}
+
+/* Mood */
+.nexa-anchor.mood-thinking .nexa-holo-core {
+  background: radial-gradient(circle, rgba(79, 195, 255, 0.75), transparent 60%);
+}
+
+.nexa-anchor.mood-happy .nexa-sprite {
+  filter: drop-shadow(0 8px 28px rgba(244, 197, 66, 0.15)) drop-shadow(0 20px 40px rgba(0, 0, 0, 0.5));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nexa-rig,
+  .nexa-particle,
+  .nexa-neural-ring {
+    animation: none !important;
+  }
+}

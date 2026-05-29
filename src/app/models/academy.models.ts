@@ -4,6 +4,8 @@ export type GroupStatus = 'ACTIVE' | 'INACTIVE';
 export type SituationStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 export type Difficulty = 'BASIC' | 'INTERMEDIATE' | 'ADVANCED';
 export type QuestionCategory = 'TECHNICAL' | 'ETHICAL' | 'NORMATIVE' | 'PSYCHOSOCIAL' | 'CARE_ROUTE';
+export type QuestionType = 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'OPEN' | 'PSYCH_ANALYSIS' | 'DECISION';
+export type SituationCategory = 'CLINICAL' | 'PSYCHOSOCIAL' | 'ETHICS' | 'CRISIS' | 'DEVELOPMENT' | 'ORGANIZATIONAL';
 
 export interface User {
   id: string;
@@ -21,14 +23,23 @@ export interface TeacherProfile {
   userId: string;
   institution: string;
   area: string;
+  /** REQ-01: solo docentes con este flag pueden crear casos (REQ-02). */
+  canCreateCases: boolean;
   createdAt: string;
 }
+
+export type AvatarId = 'neural-01' | 'psyche-02' | 'cortex-03' | 'mind-04' | 'synapse-05' | 'pulse-06';
+export type AvatarRarity = 'COMMON' | 'RARE' | 'EPIC';
 
 export interface StudentProfile {
   id: string;
   userId: string;
   code: string;
+  nickname?: string;
+  avatarId?: AvatarId;
+  onboardingCompleted?: boolean;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface GameGroup {
@@ -55,8 +66,10 @@ export interface Situation {
   context: string;
   learningObjective: string;
   difficulty: Difficulty;
+  category: SituationCategory;
   status: SituationStatus;
   createdById: string;
+  resources?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -76,6 +89,8 @@ export interface Question {
   scenarioId: string;
   statement: string;
   category: QuestionCategory;
+  questionType: QuestionType;
+  points: number;
   orderIndex: number;
   feedback: string;
   nextQuestionId?: string;
@@ -118,6 +133,11 @@ export interface StudentProgress {
   updatedAt: string;
 }
 
+export interface PlatformSettings {
+  emergencyLockout: boolean;
+  updatedAt: string;
+}
+
 export interface AcademyStore {
   users: User[];
   teacherProfiles: TeacherProfile[];
@@ -131,6 +151,7 @@ export interface AcademyStore {
   groupTasks: GroupTask[];
   studentAnswers: StudentAnswer[];
   studentProgress: StudentProgress[];
+  platformSettings?: PlatformSettings;
 }
 
 export interface TaskDraft {
@@ -143,7 +164,26 @@ export interface TaskDraft {
 export interface QuestionDraft {
   statement: string;
   category: QuestionCategory;
+  questionType: QuestionType;
+  points: number;
   feedback: string;
   options: string[];
   correctIndex: number;
+}
+
+export interface SituationDraft {
+  title: string;
+  description: string;
+  context: string;
+  learningObjective: string;
+  difficulty: Difficulty;
+  category: SituationCategory;
+  resources?: string;
+}
+
+export interface ScenarioDraft {
+  title: string;
+  context: string;
+  instructions: string;
+  dialogues?: string;
 }
