@@ -1,0 +1,750 @@
+/* ── GARY · NPC libre (derecha por defecto) + burbuja separada ── */
+
+
+
+.guide-npc-scene {
+
+  position: fixed;
+
+  bottom: 0;
+
+  right: 0;
+
+  left: auto;
+
+  z-index: 50;
+
+  width: min(580px, 94vw);
+
+  height: min(420px, 54vh);
+
+  pointer-events: none;
+
+}
+
+
+
+.guide-npc-scene.dock-left {
+
+  right: auto;
+
+  left: 0;
+
+}
+
+
+
+.guide-npc-scene.guide-inline {
+
+  position: relative;
+
+  width: 100%;
+
+  height: min(380px, 48vh);
+
+}
+
+
+
+/* Presencia ampliada (onboarding, escenas cinematográficas) */
+
+.guide-npc-scene.guide-hero-scene {
+
+  width: min(660px, 96vw);
+
+  height: min(480px, 58vh);
+
+}
+
+
+
+.guide-hero-scene .guide-npc-presence {
+
+  width: min(340px, 58vw);
+
+  height: min(420px, 52vh);
+
+}
+
+
+
+/* ── Personaje flotando en el borde derecho ── */
+
+.guide-npc-presence {
+
+  position: absolute;
+
+  bottom: 0;
+
+  right: 0;
+
+  left: auto;
+
+  width: min(300px, 54vw);
+
+  height: min(380px, 50vh);
+
+  z-index: 1;
+
+  display: flex;
+
+  align-items: flex-end;
+
+  justify-content: center;
+
+}
+
+
+
+.dock-left .guide-npc-presence {
+
+  right: auto;
+
+  left: 0;
+
+}
+
+
+
+.guide-npc-floor-glow {
+
+  position: absolute;
+
+  bottom: 0;
+
+  left: 50%;
+
+  transform: translateX(-50%);
+
+  width: 90%;
+
+  height: 22%;
+
+  background: radial-gradient(ellipse, rgba(79, 195, 255, 0.22), transparent 72%);
+
+  filter: blur(18px);
+
+  z-index: 0;
+
+  pointer-events: none;
+
+}
+
+
+
+.guide-npc-presence app-guide-character {
+
+  position: relative;
+
+  z-index: 2;
+
+  width: 100%;
+
+  height: 100%;
+
+}
+
+
+
+/* ── Burbuja a la izquierda del personaje (apunta hacia la derecha) ── */
+
+.guide-speech-bubble {
+
+  position: absolute;
+
+  bottom: min(250px, 36vh);
+
+  right: min(230px, 40vw);
+
+  left: auto;
+
+  z-index: 3;
+
+  max-width: min(320px, calc(100vw - 260px));
+
+  pointer-events: auto;
+
+  animation: bubble-enter-right 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  filter: drop-shadow(0 8px 24px rgba(79, 195, 255, 0.12));
+
+}
+
+
+
+.dock-left .guide-speech-bubble {
+
+  right: auto;
+
+  left: min(230px, 40vw);
+
+  animation-name: bubble-enter-left;
+
+}
+
+
+
+.guide-hero-scene .guide-speech-bubble {
+
+  bottom: min(290px, 40vh);
+
+  right: min(270px, 44vw);
+
+  max-width: min(340px, calc(100vw - 280px));
+
+}
+
+
+
+.guide-hero-scene.dock-left .guide-speech-bubble {
+
+  right: auto;
+
+  left: min(270px, 44vw);
+
+}
+
+
+
+.bubble-inner {
+
+  position: relative;
+
+  padding: 0.75rem 1rem 0.85rem;
+
+  border-radius: var(--psy-radius);
+
+  background: linear-gradient(
+
+    145deg,
+
+    rgba(19, 16, 42, 0.82),
+
+    rgba(34, 28, 66, 0.72)
+
+  );
+
+  border: 1px solid rgba(79, 195, 255, 0.32);
+
+  backdrop-filter: blur(14px);
+
+  box-shadow:
+
+    0 0 20px rgba(79, 195, 255, 0.1),
+
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+}
+
+
+
+.bubble-speaking .bubble-inner {
+
+  border-color: rgba(79, 195, 255, 0.5);
+
+  box-shadow:
+
+    0 0 28px rgba(79, 195, 255, 0.18),
+
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+  animation: bubble-glow 2s ease-in-out infinite;
+
+}
+
+
+
+.bubble-label {
+
+  display: block;
+
+  margin-bottom: 0.3rem;
+
+  font-family: var(--psy-font-hud);
+
+  font-size: 0.52rem;
+
+  letter-spacing: 0.14em;
+
+  text-transform: uppercase;
+
+  color: var(--psy-gold);
+
+}
+
+
+
+.bubble-text {
+
+  margin: 0;
+
+  color: var(--psy-ink);
+
+  font-size: 0.88rem;
+
+  line-height: 1.5;
+
+}
+
+
+
+.bubble-cursor {
+
+  display: inline-block;
+
+  width: 2px;
+
+  height: 0.95em;
+
+  margin-left: 1px;
+
+  background: var(--psy-gold);
+
+  vertical-align: text-bottom;
+
+  animation: cursor-blink 0.75s step-end infinite;
+
+}
+
+
+
+.bubble-hint {
+
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 0.25rem;
+
+  margin-top: 0.55rem;
+
+  padding: 0.3rem 0.65rem;
+
+  border: 1px solid rgba(244, 197, 66, 0.35);
+
+  border-radius: var(--psy-radius-pill);
+
+  background: rgba(244, 197, 66, 0.08);
+
+  color: var(--psy-gold);
+
+  font-family: var(--psy-font-display);
+
+  font-size: 0.68rem;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition: all 0.2s ease;
+
+}
+
+
+
+.bubble-hint:hover {
+
+  background: rgba(244, 197, 66, 0.15);
+
+  box-shadow: 0 0 12px rgba(244, 197, 66, 0.2);
+
+}
+
+
+
+.bubble-hint .material-symbols-outlined {
+
+  font-size: 0.9rem;
+
+}
+
+
+
+/* Cola hacia el personaje (lado derecho) */
+
+.bubble-tail {
+
+  position: absolute;
+
+  right: -6px;
+
+  left: auto;
+
+  bottom: 32%;
+
+  width: 12px;
+
+  height: 12px;
+
+  background: rgba(24, 20, 48, 0.88);
+
+  border-right: 1px solid rgba(79, 195, 255, 0.35);
+
+  border-bottom: 1px solid rgba(79, 195, 255, 0.35);
+
+  transform: rotate(-45deg);
+
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
+
+}
+
+
+
+.dock-left .bubble-tail {
+
+  right: auto;
+
+  left: -6px;
+
+  border-right: none;
+
+  border-left: 1px solid rgba(79, 195, 255, 0.35);
+
+  border-bottom: 1px solid rgba(79, 195, 255, 0.35);
+
+  transform: rotate(45deg);
+
+  box-shadow: -2px 2px 8px rgba(0, 0, 0, 0.2);
+
+}
+
+
+
+.bubble-dismiss {
+
+  position: absolute;
+
+  top: -10px;
+
+  left: -6px;
+
+  right: auto;
+
+  z-index: 2;
+
+  width: 24px;
+
+  height: 24px;
+
+  border: 1px solid rgba(155, 143, 217, 0.3);
+
+  border-radius: 50%;
+
+  background: rgba(19, 16, 42, 0.85);
+
+  color: var(--psy-muted);
+
+  font-size: 0.95rem;
+
+  line-height: 1;
+
+  cursor: pointer;
+
+  pointer-events: auto;
+
+  transition: all 0.18s ease;
+
+}
+
+
+
+.dock-left .bubble-dismiss {
+
+  left: auto;
+
+  right: -6px;
+
+}
+
+
+
+.bubble-dismiss:hover {
+
+  color: var(--psy-gold);
+
+  border-color: var(--psy-gold);
+
+}
+
+
+
+:host.guide-dock-right .guide-fab {
+
+  right: 1.5rem;
+
+  left: auto;
+
+}
+
+
+
+:host.guide-dock-left .guide-fab {
+
+  left: 1.5rem;
+
+  right: auto;
+
+}
+
+
+
+.guide-fab {
+
+  position: fixed;
+
+  bottom: 1.5rem;
+
+  z-index: 50;
+
+  width: 52px;
+
+  height: 52px;
+
+  border-radius: 50%;
+
+  border: 2px solid var(--psy-border-gold);
+
+  background: linear-gradient(135deg, rgba(107, 140, 255, 0.35), rgba(123, 92, 191, 0.4));
+
+  color: var(--psy-gold);
+
+  cursor: pointer;
+
+  box-shadow: var(--psy-shadow-glow-gold);
+
+  display: grid;
+
+  place-items: center;
+
+  pointer-events: auto;
+
+  animation: fab-pulse 3s ease-in-out infinite;
+
+}
+
+
+
+@keyframes bubble-enter-right {
+
+  from {
+
+    opacity: 0;
+
+    transform: translate(12px, 10px) scale(0.92);
+
+  }
+
+  to {
+
+    opacity: 1;
+
+    transform: translate(0, 0) scale(1);
+
+  }
+
+}
+
+
+
+@keyframes bubble-enter-left {
+
+  from {
+
+    opacity: 0;
+
+    transform: translate(-12px, 10px) scale(0.92);
+
+  }
+
+  to {
+
+    opacity: 1;
+
+    transform: translate(0, 0) scale(1);
+
+  }
+
+}
+
+
+
+@keyframes bubble-glow {
+
+  0%, 100% { filter: brightness(1); }
+
+  50% { filter: brightness(1.06); }
+
+}
+
+
+
+@keyframes cursor-blink {
+
+  0%, 100% { opacity: 1; }
+
+  50% { opacity: 0; }
+
+}
+
+
+
+@keyframes fab-pulse {
+
+  0%, 100% { box-shadow: 0 0 12px rgba(244, 197, 66, 0.2); }
+
+  50% { box-shadow: 0 0 22px rgba(244, 197, 66, 0.35); }
+
+}
+
+
+
+@media (max-width: 640px) {
+
+  .guide-npc-scene {
+
+    width: 100%;
+
+    height: min(360px, 46vh);
+
+  }
+
+
+
+  .guide-npc-presence {
+
+    width: min(210px, 48vw);
+
+    height: min(300px, 40vh);
+
+  }
+
+
+
+  .guide-speech-bubble {
+
+    bottom: min(210px, 32vh);
+
+    right: min(190px, 44vw);
+
+    max-width: calc(100vw - 200px);
+
+  }
+
+
+
+  .dock-left .guide-speech-bubble {
+
+    left: min(190px, 44vw);
+
+  }
+
+}
+
+
+
+@media (prefers-reduced-motion: reduce) {
+
+  .guide-speech-bubble,
+
+  .bubble-speaking .bubble-inner,
+
+  .bubble-cursor,
+
+  .guide-fab,
+
+  .guide-npc-scene.guide-scroll-companion {
+
+    animation: none !important;
+
+  }
+
+  .guide-npc-scene.guide-scroll-companion {
+    transform: none !important;
+    will-change: auto;
+  }
+
+}
+
+/* ── Módulo estudiante: presencia compacta + companion dinámico ── */
+:host.guide-presence-student .guide-npc-scene {
+  width: min(360px, 72vw);
+  height: min(300px, 38vh);
+}
+
+:host.guide-presence-student .guide-npc-scene.guide-scroll-companion {
+  transform-origin: 100% 100%;
+  will-change: transform;
+  filter: drop-shadow(0 12px 40px rgba(79, 195, 255, 0.08));
+}
+
+:host.guide-presence-student .guide-npc-scene.guide-scroll-companion::before {
+  content: '';
+  position: absolute;
+  inset: 8% 0 0 18%;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 72% 88%, rgba(79, 195, 255, 0.1), transparent 62%);
+  opacity: 0.85;
+}
+
+:host.guide-presence-student .guide-npc-scene.guide-scroll-active .guide-npc-presence {
+  transition: filter 0.45s ease;
+}
+
+:host.guide-presence-student .guide-npc-scene.guide-scroll-active .guide-speech-bubble {
+  transition: filter 0.35s ease;
+}
+
+:host.guide-presence-student .guide-npc-scene.guide-scroll-active:has(.bubble-speaking) .guide-npc-presence {
+  filter: brightness(1.04);
+}
+
+:host.guide-presence-student .guide-npc-presence {
+  width: min(200px, 34vw);
+  height: min(260px, 32vh);
+}
+
+:host.guide-presence-student .guide-npc-floor-glow {
+  width: 80%;
+  height: 18%;
+  filter: blur(14px);
+}
+
+:host.guide-presence-student .guide-speech-bubble {
+  bottom: min(175px, 26vh);
+  right: min(165px, 30vw);
+  max-width: min(260px, calc(100vw - 190px));
+}
+
+:host.guide-presence-student .bubble-inner {
+  padding: 0.65rem 0.85rem 0.75rem;
+}
+
+:host.guide-presence-student .bubble-text {
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+:host.guide-presence-student .guide-fab {
+  width: 46px;
+  height: 46px;
+}
+
+@media (max-width: 640px) {
+  :host.guide-presence-student .guide-npc-scene {
+    width: 100%;
+    height: min(280px, 36vh);
+  }
+
+  :host.guide-presence-student .guide-npc-presence {
+    width: min(170px, 40vw);
+    height: min(220px, 28vh);
+  }
+
+  :host.guide-presence-student .guide-speech-bubble {
+    bottom: min(155px, 24vh);
+    right: min(145px, 38vw);
+    max-width: calc(100vw - 168px);
+  }
+}
+

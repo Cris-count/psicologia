@@ -4,19 +4,24 @@ import { FormsModule } from '@angular/forms';
 import { GameGroup, GroupTask, Question, Scenario, Situation, User } from '../models/academy.models';
 import { AcademyDataService } from '../services/academy-data.service';
 import { AuthService } from '../services/auth.service';
+import { GameAnimateDirective } from '../shared/directives/game-animate.directive';
+import { GameHudComponent } from '../shared/ui/game-hud/game-hud.component';
+import { GameLogoutButtonComponent } from '../shared/ui/game-logout-button/game-logout-button.component';
+import { ThreeBackgroundComponent } from '../shared/ui/three-background/three-background.component';
 
 @Component({
   selector: 'app-teacher-dashboard-page',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ThreeBackgroundComponent, GameHudComponent, GameLogoutButtonComponent, GameAnimateDirective],
   template: `
+    <app-three-background intensity="ambient" />
     <div class="app-shell">
       <aside class="sidebar">
         <div>
           <div class="sidebar-brand">
-            <img class="app-logo" src="/psych-simulator-logo.svg" alt="" aria-hidden="true" />
+            <img class="app-logo" src="/mind-sphere-logo.svg" alt="" aria-hidden="true" />
             <div>
-              <p class="eyebrow">Maestro</p>
-              <h1>Aula de simulacion</h1>
+              <p class="eyebrow">Maestro · Nivel Instructor</p>
+              <h1>Arena de Simulación</h1>
             </div>
           </div>
           <p class="muted">Grupos, estudiantes, tareas y resultados.</p>
@@ -28,19 +33,28 @@ import { AuthService } from '../services/auth.service';
           <button type="button" [class.active-nav]="activeSection === 'tareas'" (click)="showSection('tareas')">Tareas</button>
           <button type="button" [class.active-nav]="activeSection === 'resultados'" (click)="showSection('resultados')">Resultados</button>
         </nav>
-        <button class="ghost-button" type="button" (click)="auth.logout()">Cerrar sesion</button>
+        <app-game-logout-button label="Cerrar sesión" [block]="true" />
       </aside>
 
-      <main class="content">
+      <main class="content" appGameAnimate="fade-up">
+        <app-game-hud
+          eyebrow="Maestro · Arena Instructor"
+          [title]="teacher()?.name ?? 'Instructor'"
+          subtitle="Gestiona grupos, tareas y resultados"
+          [level]="12"
+          [xpPercent]="78"
+        >
+          <app-game-logout-button hudActions label="Salir" [compact]="true" />
+        </app-game-hud>
+
         <section class="page-header">
           <div>
-            <p class="eyebrow">Gestion pedagogica</p>
-            <h2>Panel del maestro</h2>
+            <p class="eyebrow">Gestión pedagógica</p>
+            <h2>Panel del Maestro</h2>
             <p>
               Crea grupos y estudiantes. Luego vincula situaciones, escenarios y preguntas del catalogo mediante checklist.
             </p>
           </div>
-          <div class="status-note">Usuario: {{ teacher()?.name }}</div>
         </section>
 
         @if (activeSection === 'resumen') {
