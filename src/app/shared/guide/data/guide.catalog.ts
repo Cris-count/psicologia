@@ -5,6 +5,8 @@ export type GuideContext =
   | 'loader'
   | 'onboarding_welcome'
   | 'onboarding_avatar'
+  | 'onboarding_appearance'
+  | 'onboarding_accessories'
   | 'onboarding_nickname'
   | 'onboarding_complete'
   | 'student_groups'
@@ -34,11 +36,19 @@ export const GUIDE_MESSAGES: Record<GuideContext, GuideMessage> = {
     mood: 'happy',
   },
   onboarding_avatar: {
-    text: 'Elige tu héroe. Cada personaje tiene un estilo clínico distinto — como en un roster de videojuego.',
+    text: 'Elige tu arquetipo clínico. Después podrás ajustar piel, cabello, ojos y ropa como en un avatar social.',
     mood: 'encourage',
   },
+  onboarding_appearance: {
+    text: 'Personaliza tu look: tono de piel, color y peinado, ojos y color de uniforme. ¡Estilo Bitmoji!',
+    mood: 'happy',
+  },
+  onboarding_accessories: {
+    text: 'Personaliza tu look: visor, insignia o aura. Puedes cambiarlo después en tu perfil.',
+    mood: 'happy',
+  },
   onboarding_nickname: {
-    text: 'Tu nickname aparecerá en misiones, progreso y rankings. Elige algo memorable.',
+    text: 'Ponle nombre a tu personaje y elige un nickname único para rankings y misiones.',
     mood: 'encourage',
   },
   onboarding_complete: {

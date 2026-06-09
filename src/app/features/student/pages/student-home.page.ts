@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { GameGroup, GroupTask } from '../../../models/academy.models';
 import { AcademyDataService } from '../../../services/academy-data.service';
 import { AuthService } from '../../../services/auth.service';
@@ -12,26 +13,37 @@ import { GameProgressComponent } from '../../../shared/ui/game-progress/game-pro
 
 @Component({
   selector: 'app-student-home-page',
-  imports: [CommonModule, GameProgressComponent, GameHudComponent, GameLogoutButtonComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    ThreeBackgroundComponent,
+    GameProgressComponent,
+    GameHudComponent,
+    GameLogoutButtonComponent,
+    GameAnimateDirective,
+    ClinicalMissionComponent,
+  ],
   template: `
-    <div class="student-shell student-with-guide">
-      <span class="student-bg-orb orb-a" aria-hidden="true"></span>
-      <span class="student-bg-orb orb-b" aria-hidden="true"></span>
+    <app-three-background [intensity]="view === 'task' ? 'login' : 'ambient'" />
+    <div class="student-shell student-with-guide" [class.mission-mode]="view === 'task'">
+      @if (view !== 'task') {
+        <app-game-hud
+          [eyebrow]="'Estudiante · ' + pageTitle()"
+          [title]="profile.characterName()"
+          [subtitle]="'@' + profile.displayName()"
+          [level]="7"
+          [xpPercent]="progressPercent()"
+          [avatarId]="profile.avatarId()"
+        >
+          <a class="ghost-button hud-customize" routerLink="/student/perfil" hudActions>Personalizar</a>
+          <app-game-logout-button hudActions label="Salir" [compact]="true" />
+        </app-game-hud>
 
-      <app-game-hud
-        [eyebrow]="'Estudiante · ' + pageTitle()"
-        [title]="profile.displayName()"
-        [subtitle]="pageIntro()"
-        [level]="7"
-        [xpPercent]="progressPercent()"
-        [avatarId]="profile.profile()?.avatarId ?? null"
-      >
-        <app-game-logout-button hudActions label="Salir" [compact]="true" />
-      </app-game-hud>
-
-      <nav class="student-flow" aria-label="Navegacion del estudiante">
-        <button type="button" class="active-nav" (click)="goBackInFlow()">{{ currentMenuLabel() }}</button>
-      </nav>
+        <nav class="student-flow" aria-label="Navegacion del estudiante">
+          <button type="button" class="active-nav" (click)="goBackInFlow()">{{ currentMenuLabel() }}</button>
+        </nav>
+      }
 
       @if (view === 'groups') {
         <section class="student-view student-quick-enter">
@@ -155,6 +167,12 @@ import { GameProgressComponent } from '../../../shared/ui/game-progress/game-pro
         .student-with-guide {
           padding-bottom: clamp(0.5rem, 4vh, 2rem);
         }
+      }
+
+      .hud-customize {
+        font-size: 0.78rem;
+        padding: 0.45rem 0.75rem;
+        white-space: nowrap;
       }
     `,
   ],

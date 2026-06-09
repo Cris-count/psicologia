@@ -8,6 +8,7 @@ import { AuthService } from '../services/auth.service';
 import { GuideCharacterComponent } from '../shared/guide/components/guide-character/guide-character.component';
 import { GuideService } from '../shared/guide/services/guide.service';
 import { StudentProfileService } from '../shared/guide/services/student-profile.service';
+import { TeacherProfileService } from '../shared/guide/services/teacher-profile.service';
 import { GameLoaderService } from '../shared/services/game-loader.service';
 import { GameSfxService } from '../shared/services/game-sfx.service';
 import { ThreeBackgroundComponent } from '../shared/ui/three-background/three-background.component';
@@ -161,6 +162,7 @@ export class LoginPage implements OnInit {
   private readonly loader = inject(GameLoaderService);
   protected readonly guide = inject(GuideService);
   private readonly studentProfile = inject(StudentProfileService);
+  private readonly teacherProfile = inject(TeacherProfileService);
   protected readonly sfx = inject(GameSfxService);
 
   email = '';
@@ -217,6 +219,9 @@ export class LoginPage implements OnInit {
     let route = this.auth.homeRouteFor(user.role);
     if (user.role === 'STUDENT' && this.studentProfile.needsOnboarding()) {
       route = '/student/onboarding';
+    }
+    if (user.role === 'TEACHER' && this.teacherProfile.needsProfileSetup()) {
+      route = '/teacher/perfil';
     }
 
     await this.router.navigateByUrl(route);

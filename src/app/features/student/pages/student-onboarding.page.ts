@@ -1,18 +1,17 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AvatarId } from '../../../models/academy.models';
 import { AuthService } from '../../../services/auth.service';
 import { GameAnimateDirective } from '../../../shared/directives/game-animate.directive';
-import { AvatarPickerComponent } from '../../../shared/guide/components/avatar-picker/avatar-picker.component';
-import { GameAvatarPortraitComponent } from '../../../shared/guide/components/game-avatar-portrait/game-avatar-portrait.component';
-import { avatarById } from '../../../shared/guide/data/avatar.catalog';
+import { AvatarComposerComponent } from '../../../shared/guide/components/avatar-composer/avatar-composer.component';
+import { AvatarStudioComponent } from '../../../shared/guide/components/avatar-studio/avatar-studio.component';
 import { GuideService } from '../../../shared/guide/services/guide.service';
 import { StudentProfileService } from '../../../shared/guide/services/student-profile.service';
 import { GameLoaderService } from '../../../shared/services/game-loader.service';
 import { ThreeBackgroundComponent } from '../../../shared/ui/three-background/three-background.component';
 
-type OnboardingStep = 'welcome' | 'avatar' | 'nickname';
+type OnboardingStep = 'welcome' | 'studio' | 'identity';
 
 @Component({
   selector: 'app-student-onboarding-page',
@@ -22,8 +21,8 @@ type OnboardingStep = 'welcome' | 'avatar' | 'nickname';
   imports: [
     FormsModule,
     ThreeBackgroundComponent,
-    AvatarPickerComponent,
-    GameAvatarPortraitComponent,
+    AvatarStudioComponent,
+    AvatarComposerComponent,
     GameAnimateDirective,
   ],
   template: `
@@ -32,7 +31,7 @@ type OnboardingStep = 'welcome' | 'avatar' | 'nickname';
     <div class="onboarding-cinema" appGameAnimate="fade-up">
       <header class="onboarding-hud">
         <p class="eyebrow">Creación de personaje</p>
-        <h1>Tu identidad en MIND-SPHERE</h1>
+        <h1>Tu avatar en MIND-SPHERE</h1>
       </header>
 
       <div class="onboarding-main">
@@ -48,64 +47,57 @@ type OnboardingStep = 'welcome' | 'avatar' | 'nickname';
           @if (step() === 'welcome') {
             <h2>Bienvenido, explorador mental</h2>
             <p>
-              Acceso confirmado. Antes de entrar a las misiones clínicas, elige tu héroe y define tu nickname.
-              GARY te acompañará con pistas psicológicas — nunca con la respuesta directa.
+              Elige uno de los personajes disponibles y ponle nombre. Así aparecerás en el mundo
+              de MIND-SPHERE.
             </p>
-            <button class="primary-button" type="button" (click)="goStep('avatar')">Elegir personaje</button>
+            <button class="primary-button" type="button" (click)="goStep('studio')">Elegir mi personaje</button>
           }
 
-          @if (step() === 'avatar') {
-            <h2>Selecciona tu héroe</h2>
-            <div class="hero-preview-row">
-              <app-game-avatar-portrait [avatarId]="selectedAvatar" size="lg" />
-              <div class="hero-preview-meta">
-                <span>{{ selectedHero().className }}</span>
-                <strong>{{ selectedHero().label }}</strong>
-                <small>{{ selectedHero().theme }}</small>
-              </div>
-            </div>
-            <app-avatar-picker [(selectedId)]="selectedAvatar" />
+          @if (step() === 'studio') {
+            <app-avatar-studio
+              [(draftAvatarId)]="draftAvatarId"
+              [(characterName)]="characterName"
+              confirmLabel="Confirmar personaje y continuar"
+              (confirmed)="onAvatarConfirmed($event)"
+            />
             <div class="button-row">
               <button class="ghost-button" type="button" (click)="goStep('welcome')">Atrás</button>
-              <button class="primary-button" type="button" (click)="goStep('nickname')">Confirmar héroe</button>
             </div>
           }
 
-          @if (step() === 'nickname') {
-            <h2>Define tu nickname</h2>
-            <p>Este será tu nombre visible en MIND-SPHERE y en el ranking de misiones.</p>
-            <form class="stack-form" (ngSubmit)="finish()">
-              <label>
-                Nickname (mín. 3 caracteres)
-                <input
-                  [(ngModel)]="nickname"
-                  name="nickname"
-                  required
-                  minlength="3"
-                  maxlength="20"
-                  placeholder="Ej: NeuralExplorer"
-                />
-              </label>
-              @if (nickname.length >= 3) {
-                <p class="nickname-status" [class.ok]="nicknameAvailable()" [class.bad]="!nicknameAvailable()">
-                  {{ nicknameAvailable() ? 'Nickname disponible' : 'Nickname no disponible' }}
-                </p>
-              }
-              <div class="player-card-preview">
-                <app-game-avatar-portrait [avatarId]="selectedAvatar" size="sm" />
-                <div>
-                  <span class="card-label">Tarjeta de jugador</span>
-                  <span class="card-nickname">{{ nickname.trim() || 'TuNickname' }}</span>
+          @if (step() === 'identity') {
+            <h2>Tu identidad en el juego</h2>
+            <p>
+              Tu personaje se llama <strong>{{ characterName }}</strong>. Ahora elige tu nickname único.
+            </p>
+            <div class="identity-layout">
+              <app-avatar-composer [avatarId]="confirmedAvatarId()" size="lg" />
+              <form class="stack-form" (ngSubmit)="finish()">
+                <label>
+                  Nickname (mín. 3 caracteres, único)
+                  <input
+                    [(ngModel)]="nickname"
+                    name="nickname"
+                    required
+                    minlength="3"
+                    maxlength="20"
+                    placeholder="Ej: NeuralExplorer"
+                  />
+                </label>
+                @if (nickname.length >= 3) {
+                  <p class="nickname-status" [class.ok]="nicknameAvailable()" [class.bad]="!nicknameAvailable()">
+                    {{ nicknameAvailable() ? 'Nickname disponible' : 'Nickname no disponible' }}
+                  </p>
+                }
+                @if (error()) {
+                  <p class="form-error">{{ error() }}</p>
+                }
+                <div class="button-row">
+                  <button class="ghost-button" type="button" (click)="goStep('studio')">Cambiar personaje</button>
+                  <button class="primary-button" type="submit" [disabled]="!canFinish()">Entrar a MIND-SPHERE</button>
                 </div>
-              </div>
-              @if (error()) {
-                <p class="form-error">{{ error() }}</p>
-              }
-              <div class="button-row">
-                <button class="ghost-button" type="button" (click)="goStep('avatar')">Atrás</button>
-                <button class="primary-button" type="submit" [disabled]="!canFinish()">Entrar a MIND-SPHERE</button>
-              </div>
-            </form>
+              </form>
+            </div>
           }
         </article>
       </div>
@@ -121,15 +113,16 @@ export class StudentOnboardingPage implements OnInit {
 
   readonly step = signal<OnboardingStep>('welcome');
   readonly error = signal('');
-  selectedAvatar: AvatarId = 'neural-01';
+  readonly confirmedAvatarId = signal<AvatarId>('psych-alejandro');
+  draftAvatarId: AvatarId = 'psych-alejandro';
+  characterName = '';
   nickname = '';
-
-  readonly selectedHero = computed(() => avatarById(this.selectedAvatar));
+  avatarConfirmed = false;
 
   readonly steps = [
     { id: 'welcome' as const, label: 'Briefing', index: 0 },
-    { id: 'avatar' as const, label: 'Héroe', index: 1 },
-    { id: 'nickname' as const, label: 'Nickname', index: 2 },
+    { id: 'studio' as const, label: 'Avatar', index: 1 },
+    { id: 'identity' as const, label: 'Identidad', index: 2 },
   ];
 
   ngOnInit(): void {
@@ -144,7 +137,16 @@ export class StudentOnboardingPage implements OnInit {
 
   goStep(next: OnboardingStep): void {
     this.step.set(next);
-    this.guide.setContext(`onboarding_${next}` as 'onboarding_welcome' | 'onboarding_avatar' | 'onboarding_nickname');
+    const ctx = next === 'studio' ? 'onboarding_appearance' : `onboarding_${next === 'identity' ? 'nickname' : next}`;
+    this.guide.setContext(ctx as 'onboarding_welcome');
+  }
+
+  onAvatarConfirmed(selection: { avatarId: AvatarId; characterName: string }): void {
+    this.confirmedAvatarId.set(selection.avatarId);
+    this.draftAvatarId = selection.avatarId;
+    this.characterName = selection.characterName;
+    this.avatarConfirmed = true;
+    this.goStep('identity');
   }
 
   nicknameAvailable(): boolean {
@@ -152,26 +154,31 @@ export class StudentOnboardingPage implements OnInit {
   }
 
   canFinish(): boolean {
-    return this.nickname.trim().length >= 3 && this.nicknameAvailable();
+    return (
+      this.avatarConfirmed &&
+      this.characterName.trim().length >= 2 &&
+      this.nickname.trim().length >= 3 &&
+      this.nicknameAvailable()
+    );
   }
 
   async finish(): Promise<void> {
     this.error.set('');
     if (!this.canFinish()) {
-      this.error.set('El nickname debe tener al menos 3 caracteres y estar disponible.');
+      this.error.set('Confirma tu personaje, nombre (2+) y nickname disponible (3+).');
       return;
     }
 
     await this.loader.runSequence([
-      { progress: 30, message: 'Sincronizando héroe...', delayMs: 350 },
-      { progress: 65, message: 'Registrando nickname...', delayMs: 400 },
-      { progress: 100, message: '¡Personaje listo!', delayMs: 350 },
+      { progress: 40, message: 'Guardando personaje...', delayMs: 350 },
+      { progress: 75, message: 'Registrando identidad...', delayMs: 350 },
+      { progress: 100, message: '¡Listo!', delayMs: 300 },
     ]);
 
-    const ok = this.profile.saveProfile(this.nickname, this.selectedAvatar);
+    const ok = this.profile.saveProfile(this.nickname, this.confirmedAvatarId(), this.characterName);
     this.loader.hide();
     if (!ok) {
-      this.error.set('No se pudo guardar el perfil. Intenta otro nickname.');
+      this.error.set('No se pudo guardar. Intenta otro nickname.');
       return;
     }
 
