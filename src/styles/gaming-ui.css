@@ -480,7 +480,9 @@
 
   top: 0;
 
-  height: 100vh;
+  height: 100svh;
+
+  min-height: 0;
 
   display: flex;
 
@@ -501,6 +503,12 @@
   box-shadow: 4px 0 20px rgba(0, 0, 0, 0.35);
 
   z-index: 10;
+
+  box-sizing: border-box;
+
+  overflow-y: auto;
+
+  overflow-x: hidden;
 
 }
 

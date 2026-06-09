@@ -1,52 +1,40 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { GameGroup, GroupTask } from '../../../models/academy.models';
 import { AcademyDataService } from '../../../services/academy-data.service';
 import { AuthService } from '../../../services/auth.service';
-import { GameAnimateDirective } from '../../../shared/directives/game-animate.directive';
 import { GuideService } from '../../../shared/guide/services/guide.service';
 import { StudentProfileService } from '../../../shared/guide/services/student-profile.service';
 import { GameHudComponent } from '../../../shared/ui/game-hud/game-hud.component';
 import { GameLogoutButtonComponent } from '../../../shared/ui/game-logout-button/game-logout-button.component';
 import { GameProgressComponent } from '../../../shared/ui/game-progress/game-progress.component';
-import { ThreeBackgroundComponent } from '../../../shared/ui/three-background/three-background.component';
-import { ClinicalMissionComponent } from '../mission/clinical-mission.component';
 
 @Component({
   selector: 'app-student-home-page',
-  imports: [
-    CommonModule,
-    FormsModule,
-    ThreeBackgroundComponent,
-    GameProgressComponent,
-    GameHudComponent,
-    GameLogoutButtonComponent,
-    GameAnimateDirective,
-    ClinicalMissionComponent,
-  ],
+  imports: [CommonModule, GameProgressComponent, GameHudComponent, GameLogoutButtonComponent],
   template: `
-    <app-three-background [intensity]="view === 'task' ? 'login' : 'ambient'" />
-    <div class="student-shell student-with-guide" [class.mission-mode]="view === 'task'">
-      @if (view !== 'task') {
-        <app-game-hud
-          [eyebrow]="'Estudiante · ' + pageTitle()"
-          [title]="profile.displayName()"
-          [subtitle]="pageIntro()"
-          [level]="7"
-          [xpPercent]="progressPercent()"
-          [avatarId]="profile.profile()?.avatarId ?? null"
-        >
-          <app-game-logout-button hudActions label="Salir" [compact]="true" />
-        </app-game-hud>
+    <div class="student-shell student-with-guide">
+      <span class="student-bg-orb orb-a" aria-hidden="true"></span>
+      <span class="student-bg-orb orb-b" aria-hidden="true"></span>
 
-        <nav class="student-flow" aria-label="Navegacion del estudiante">
-          <button type="button" class="active-nav" (click)="goBackInFlow()">{{ currentMenuLabel() }}</button>
-        </nav>
-      }
+      <app-game-hud
+        [eyebrow]="'Estudiante · ' + pageTitle()"
+        [title]="profile.displayName()"
+        [subtitle]="pageIntro()"
+        [level]="7"
+        [xpPercent]="progressPercent()"
+        [avatarId]="profile.profile()?.avatarId ?? null"
+      >
+        <app-game-logout-button hudActions label="Salir" [compact]="true" />
+      </app-game-hud>
+
+      <nav class="student-flow" aria-label="Navegacion del estudiante">
+        <button type="button" class="active-nav" (click)="goBackInFlow()">{{ currentMenuLabel() }}</button>
+      </nav>
 
       @if (view === 'groups') {
-        <section class="student-view" appGameAnimate="fade-up">
+        <section class="student-view student-quick-enter">
           <div class="section-heading">
             <div>
               <p class="eyebrow">Menu de grupos</p>
@@ -75,7 +63,7 @@ import { ClinicalMissionComponent } from '../mission/clinical-mission.component'
       }
 
       @if (view === 'tasks') {
-        <section class="student-view">
+        <section class="student-view student-quick-enter">
           <div class="section-heading">
             <div>
               <p class="eyebrow">Grupo seleccionado</p>
@@ -105,31 +93,55 @@ import { ClinicalMissionComponent } from '../mission/clinical-mission.component'
           </section>
         </section>
       }
-
-      @if (view === 'task') {
-        @if (selectedTask(); as task) {
-          <app-clinical-mission
-            [task]="task"
-            [groupName]="selectedGroup()?.name ?? 'Misión'"
-            (exitMission)="showTasks()"
-          />
-        }
-      }
     </div>
   `,
   styles: [
     `
       .student-with-guide {
+        position: relative;
         width: 100%;
         max-width: var(--psy-content-max);
         margin-inline: auto;
         padding-bottom: clamp(0.5rem, 4vh, 2rem);
       }
 
-      .student-with-guide.mission-mode {
-        max-width: 100%;
-        padding: 0;
-        min-height: 92vh;
+      .student-bg-orb {
+        position: fixed;
+        z-index: -1;
+        width: 42vw;
+        max-width: 540px;
+        aspect-ratio: 1;
+        border-radius: 999px;
+        filter: blur(90px);
+        opacity: 0.18;
+        pointer-events: none;
+      }
+
+      .orb-a {
+        top: -12%;
+        left: -12%;
+        background: #4fc3ff;
+      }
+
+      .orb-b {
+        right: -14%;
+        bottom: -18%;
+        background: #9b5cff;
+      }
+
+      .student-quick-enter {
+        animation: student-quick-enter 260ms ease-out both;
+      }
+
+      @keyframes student-quick-enter {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
 
       @media (min-width: 901px) {
@@ -148,38 +160,41 @@ import { ClinicalMissionComponent } from '../mission/clinical-mission.component'
   ],
 })
 export class StudentHomePage implements OnInit {
-  view: 'groups' | 'tasks' | 'task' = 'groups';
+  view: 'groups' | 'tasks' = 'groups';
   selectedGroupId = '';
-  selectedTaskId = '';
 
   constructor(
     public readonly data: AcademyDataService,
     public readonly auth: AuthService,
     public readonly profile: StudentProfileService,
     private readonly guide: GuideService,
+    private readonly router: Router,
+    private readonly route: ActivatedRoute,
   ) {}
 
   ngOnInit(): void {
     this.auth.ensureAuthenticatedOrRedirect();
+    const initialGroupId = this.route.snapshot.queryParamMap.get('groupId');
+    if (initialGroupId && this.groups().some((group) => group.id === initialGroupId)) {
+      this.selectedGroupId = initialGroupId;
+      this.view = 'tasks';
+    }
     this.guide.setVisible(true);
     this.syncGuideContext();
   }
 
   pageTitle(): string {
-    if (this.view === 'task') return 'Misión clínica';
     if (this.view === 'tasks') return 'Tareas del grupo';
     return 'Mis grupos';
   }
 
   pageIntro(): string {
-    if (this.view === 'task') return 'Modo misión activo — GARY te acompaña en el mundo mental.';
-    if (this.view === 'tasks') return 'Elige una misión pendiente para entrar al simulador.';
+    if (this.view === 'tasks') return 'Elige una mision pendiente para entrar al simulador.';
     return `Hola ${this.profile.displayName()}, selecciona tu grupo de entrenamiento.`;
   }
 
   currentMenuLabel(): string {
-    if (this.view === 'task' && this.selectedTask()) return this.taskTitle(this.selectedTask()!);
-    if ((this.view === 'tasks' || this.view === 'task') && this.selectedGroup()) return this.selectedGroup()!.name;
+    if (this.view === 'tasks' && this.selectedGroup()) return this.selectedGroup()!.name;
     return 'Grupos';
   }
 
@@ -199,19 +214,15 @@ export class StudentHomePage implements OnInit {
 
   openGroup(groupId: string): void {
     this.selectedGroupId = groupId;
-    this.selectedTaskId = '';
     this.view = 'tasks';
     this.scrollContentTop();
     this.syncGuideContext();
   }
 
   openTask(taskId: string): void {
-    this.selectedTaskId = taskId;
-    this.view = 'task';
-    this.scrollContentTop();
-    this.syncGuideContext();
+    void this.router.navigate(['/student/mission', this.selectedGroupId, taskId]);
     this.guide.setVisible(true);
-    this.guide.show('Misión clínica iniciada. Explora el mapa mental y toma decisiones en cada zona.', 'encourage');
+    this.guide.show('Mision clinica iniciada. Explora el mapa mental y toma decisiones en cada zona.', 'encourage');
   }
 
   showGroups(): void {
@@ -220,19 +231,7 @@ export class StudentHomePage implements OnInit {
     this.syncGuideContext();
   }
 
-  showTasks(): void {
-    if (this.selectedGroupId) {
-      this.view = 'tasks';
-      this.scrollContentTop();
-      this.syncGuideContext();
-    }
-  }
-
   goBackInFlow(): void {
-    if (this.view === 'task') {
-      this.showTasks();
-      return;
-    }
     if (this.view === 'tasks') this.showGroups();
   }
 
@@ -242,10 +241,6 @@ export class StudentHomePage implements OnInit {
 
   selectedGroup(): GameGroup | undefined {
     return this.groups().find((group) => group.id === this.selectedGroupId);
-  }
-
-  selectedTask(): GroupTask | undefined {
-    return this.tasks().find((task) => task.id === this.selectedTaskId);
   }
 
   taskTitle(task: GroupTask): string {
@@ -278,7 +273,6 @@ export class StudentHomePage implements OnInit {
   private syncGuideContext(): void {
     if (this.view === 'groups') this.guide.setContext('student_groups');
     else if (this.view === 'tasks') this.guide.setContext('student_tasks');
-    else if (this.view === 'task') this.guide.setContext('student_task');
   }
 
   private scrollContentTop(): void {

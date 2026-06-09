@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
 import { APP_LOGO_PATH, APP_NAME } from '../../../core/branding.constants';
+import { AcademyDataService } from '../../../services/academy-data.service';
 import { GameAnimateDirective } from '../../../shared/directives/game-animate.directive';
 import { GameHudComponent } from '../../../shared/ui/game-hud/game-hud.component';
 import { GameLogoutButtonComponent } from '../../../shared/ui/game-logout-button/game-logout-button.component';
@@ -66,8 +67,8 @@ import { ThreeBackgroundComponent } from '../../../shared/ui/three-background/th
           [eyebrow]="'Profesor · ' + appName"
           [title]="auth.currentUser()?.name ?? 'Instructor'"
           subtitle="Diseña casos, gestiona estudiantes y monitorea progreso"
-          [level]="12"
-          [xpPercent]="72"
+          [level]="teacherLevel()"
+          [xpPercent]="teacherXpPercent()"
         >
           <app-game-logout-button hudActions label="Salir" [compact]="true" />
         </app-game-hud>
@@ -81,8 +82,30 @@ import { ThreeBackgroundComponent } from '../../../shared/ui/three-background/th
 })
 export class TeacherShellComponent implements OnInit {
   protected readonly auth = inject(AuthService);
+  private readonly data = inject(AcademyDataService);
   protected readonly appName = APP_NAME;
   protected readonly appLogo = APP_LOGO_PATH;
+
+  readonly teacherStats = computed(() => {
+    const teacher = this.auth.currentUser();
+    return teacher ? this.data.teacherStats(teacher.id) : undefined;
+  });
+
+  readonly teacherLevel = computed(() => {
+    const stats = this.teacherStats();
+    if (!stats) return 1;
+    return Math.max(1, stats.publishedCases + stats.groups + stats.tasks);
+  });
+
+  readonly teacherXpPercent = computed(() => {
+    const teacher = this.auth.currentUser();
+    if (!teacher) return 0;
+    const groupIds = new Set(this.data.groupsByTeacher(teacher.id).map((group) => group.id));
+    const taskIds = new Set(this.data.store().groupTasks.filter((task) => groupIds.has(task.groupId)).map((task) => task.id));
+    const progressRows = this.data.store().studentProgress.filter((progress) => taskIds.has(progress.taskId));
+    if (!progressRows.length) return 0;
+    return Math.round(progressRows.reduce((sum, progress) => sum + progress.progressPercentage, 0) / progressRows.length);
+  });
 
   ngOnInit(): void {
     this.auth.ensureAuthenticatedOrRedirect();

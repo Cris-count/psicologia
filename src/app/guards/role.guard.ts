@@ -4,9 +4,10 @@ import { UserRole } from '../models/academy.models';
 import { AuthService } from '../services/auth.service';
 
 export const roleGuard = (roles: UserRole[]): CanActivateFn => {
-  return () => {
+  return async () => {
     const auth = inject(AuthService);
     const router = inject(Router);
+    await auth.ready;
     const user = auth.currentUser();
 
     if (!user) {

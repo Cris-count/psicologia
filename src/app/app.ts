@@ -2,11 +2,12 @@ import { Component, HostListener, inject, OnDestroy, OnInit } from '@angular/cor
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
 import { AuthService } from './services/auth.service';
+import { AiAssistantComponent } from './shared/ui/ai-assistant/ai-assistant.component';
 import { GameLoaderComponent } from './shared/ui/game-loader/game-loader.component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, GameLoaderComponent],
+  imports: [RouterOutlet, GameLoaderComponent, AiAssistantComponent],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
@@ -42,6 +43,11 @@ export class App implements OnInit, OnDestroy {
 
   private guardProtectedRoute(url: string): void {
     const isPublic = url === '/' || url.startsWith('/login');
+    if (!this.auth.initialized()) {
+      void this.auth.ready.then(() => this.guardProtectedRoute(this.router.url));
+      return;
+    }
+
     if (!isPublic && !this.auth.isAuthenticated()) {
       void this.router.navigateByUrl('/login', { replaceUrl: true });
     }

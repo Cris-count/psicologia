@@ -14,11 +14,18 @@ export class AuthService {
   private readonly router = inject(Router);
   private readonly loader = inject(GameLoaderService);
   private readonly userState = signal<User | null>(null);
+  private readonly initializedState = signal(false);
   readonly currentUser = this.userState.asReadonly();
+  readonly initialized = this.initializedState.asReadonly();
   readonly isAuthenticated = computed(() => Boolean(this.currentUser()));
+  readonly ready: Promise<void>;
 
   constructor() {
     this.userState.set(this.restoreSession());
+    this.ready = this.data.ready.finally(() => {
+      this.userState.set(this.restoreSession());
+      this.initializedState.set(true);
+    });
   }
 
   authenticateCredentials(email: string, password: string): User | null {
@@ -48,6 +55,10 @@ export class AuthService {
   }
 
   ensureAuthenticatedOrRedirect(): boolean {
+    if (!this.initialized()) {
+      return true;
+    }
+
     if (this.isAuthenticated()) {
       return true;
     }

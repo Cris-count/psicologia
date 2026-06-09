@@ -1,10 +1,29 @@
 services:
+  psicologo-api:
+    build:
+      context: .
+      target: api
+    image: psicologo:api
+    container_name: psicologo-api
+    ports:
+      - "${API_PORT:-3000}:3000"
+    environment:
+      DATA_DIR: /data
+      PORT: 3000
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-lite-latest}
+    volumes:
+      - psicologo_data:/data
+    restart: unless-stopped
+
   psicologo:
     build:
       context: .
       target: production
     image: psicologo:latest
     container_name: psicologo-app
+    depends_on:
+      - psicologo-api
     ports:
       - "${APP_PORT:-8080}:80"
     restart: unless-stopped
@@ -16,6 +35,8 @@ services:
       target: development
     image: psicologo:dev
     container_name: psicologo-dev
+    depends_on:
+      - psicologo-api
     ports:
       - "${DEV_PORT:-4200}:4200"
     volumes:
@@ -24,7 +45,8 @@ services:
     environment:
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
-    command: ["pnpm", "exec", "ng", "serve", "--host", "0.0.0.0", "--port", "4200", "--poll", "2000"]
+    command: ["pnpm", "exec", "ng", "serve", "--host", "0.0.0.0", "--port", "4200", "--poll", "2000", "--proxy-config", "proxy.conf.json"]
 
 volumes:
   psicologo_node_modules:
+  psicologo_data:

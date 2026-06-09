@@ -23,12 +23,20 @@ import {
 } from '../models/academy.models';
 
 const STORE_KEY = 'academic-case-simulator-store-v3';
+const STORE_API_URL = '/api/store';
 
 @Injectable({ providedIn: 'root' })
 export class AcademyDataService {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly state = signal<AcademyStore>(this.loadInitialStore());
+  private readonly readyState = signal(false);
   readonly store = this.state.asReadonly();
+  readonly storeReady = this.readyState.asReadonly();
+  readonly ready: Promise<void>;
+
+  constructor() {
+    this.ready = this.loadDockerStore().finally(() => this.readyState.set(true));
+  }
 
   get users(): User[] {
     return this.store().users;
@@ -736,7 +744,7 @@ export class AcademyDataService {
   private commit(store: AcademyStore): void {
     this.state.set(store);
     if (this.isBrowser()) {
-      localStorage.setItem(STORE_KEY, JSON.stringify(store));
+      void this.saveDockerStore(store);
     }
   }
 
@@ -748,11 +756,53 @@ export class AcademyDataService {
     if (!this.isBrowser()) {
       return this.seedStore();
     }
+
     const saved = localStorage.getItem(STORE_KEY);
     if (saved) {
       return this.normalizeStore(JSON.parse(saved) as AcademyStore);
     }
+
     return this.seedStore();
+  }
+
+  private async loadDockerStore(): Promise<void> {
+    if (!this.isBrowser()) {
+      return;
+    }
+
+    try {
+      const response = await fetch(STORE_API_URL, { headers: { Accept: 'application/json' } });
+      if (!response.ok) {
+        throw new Error(`Store API responded ${response.status}`);
+      }
+
+      const remoteStore = (await response.json()) as AcademyStore | null;
+      if (remoteStore) {
+        this.state.set(this.normalizeStore(remoteStore));
+        localStorage.removeItem(STORE_KEY);
+        return;
+      }
+
+      await this.saveDockerStore(this.store());
+      localStorage.removeItem(STORE_KEY);
+    } catch (error) {
+      console.warn('No se pudo cargar el store desde Docker. Se usara el estado inicial en memoria.', error);
+    }
+  }
+
+  private async saveDockerStore(store: AcademyStore): Promise<void> {
+    try {
+      const response = await fetch(STORE_API_URL, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(store),
+      });
+      if (!response.ok) {
+        throw new Error(`Store API responded ${response.status}`);
+      }
+    } catch (error) {
+      console.warn('No se pudo guardar el store en Docker.', error);
+    }
   }
 
   private isBrowser(): boolean {

@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin - Usuarios y permisos</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700;800&family=Nunito:wght@400;600;700;800&family=Orbitron:wght@600;700;800&family=Material+Symbols+Outlined&display=swap');
+    :root {
+      --bg: #13102a;
+      --bg-soft: #1a1535;
+      --surface: rgba(34, 28, 66, 0.92);
+      --surface-raised: rgba(42, 36, 78, 0.94);
+      --line: rgba(155, 143, 217, 0.18);
+      --gold-line: rgba(244, 197, 66, 0.35);
+      --primary: #6b8cff;
+      --primary-soft: rgba(107, 140, 255, 0.14);
+      --accent: #d65db1;
+      --accent-soft: rgba(214, 93, 177, 0.12);
+      --gold: #f4c542;
+      --warning: #f5a623;
+      --success: #52c9a8;
+      --text: #f4f0fa;
+      --muted: #b8aed4;
+      --display: 'Fredoka', 'Nunito', sans-serif;
+      --body: 'Nunito', system-ui, sans-serif;
+      --hud: 'Orbitron', 'Nunito', sans-serif;
+      --shadow: 0 8px 0 rgba(0, 0, 0, 0.35), 0 16px 48px rgba(0, 0, 0, 0.45);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      height: 100svh;
+      overflow: hidden;
+      min-width: 320px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--body);
+    }
+
+    .background {
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 70% 50% at 15% -5%, rgba(107, 140, 255, 0.08), transparent 50%),
+        radial-gradient(ellipse 55% 38% at 90% 10%, rgba(123, 92, 191, 0.07), transparent 45%),
+        radial-gradient(ellipse 45% 28% at 50% 100%, rgba(214, 93, 177, 0.04), transparent 40%),
+        var(--bg);
+      z-index: 0;
+    }
+
+    .admin-app {
+      position: relative;
+      z-index: 1;
+      height: 100svh;
+      display: grid;
+      grid-template-columns: 272px minmax(0, 1fr);
+      overflow: hidden;
+    }
+
+    .sidebar {
+      height: 100svh;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      padding: 1.35rem 1rem 1.25rem;
+      background: linear-gradient(180deg, #0d1020 0%, #1a1040 48%, #0d1118 100%);
+      border-right: 2px solid var(--gold-line);
+      box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4);
+      overflow: auto;
+    }
+
+    .brand {
+      padding: 0 0.35rem 0.75rem;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 0.5rem;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-family: var(--hud);
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      color: var(--gold);
+    }
+
+    .brand p {
+      margin: 0.2rem 0 0;
+      font-family: var(--hud);
+      font-size: 0.62rem;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-weight: 700;
+    }
+
+    .nav {
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .nav a {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.75rem 0.85rem;
+      border-radius: 12px;
+      border: 2px solid transparent;
+      color: var(--muted);
+      text-decoration: none;
+      font-family: var(--display);
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    .nav a.active {
+      background: linear-gradient(90deg, rgba(79, 140, 255, 0.25), rgba(79, 140, 255, 0.08));
+      border-color: var(--primary);
+      color: white;
+      box-shadow: 0 0 20px rgba(79, 140, 255, 0.2), inset 3px 0 0 var(--gold);
+    }
+
+    .sidebar-actions {
+      display: grid;
+      gap: 0.65rem;
+      margin-top: auto;
+    }
+
+    .emergency,
+    .logout {
+      min-height: 44px;
+      border-radius: 12px;
+      font-family: var(--hud);
+      font-weight: 800;
+      letter-spacing: 0.08em;
+    }
+
+    .emergency {
+      border: 2px solid rgba(248, 113, 113, 0.5);
+      background: linear-gradient(180deg, #f87171, #dc2626);
+      color: white;
+      box-shadow: 0 4px 0 #991b1b;
+    }
+
+    .logout {
+      border: 2px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+    }
+
+    .main {
+      height: 100svh;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      padding: 1rem 1.75rem;
+      border-bottom: 2px solid var(--gold-line);
+      background: linear-gradient(180deg, rgba(30, 42, 78, 0.95), rgba(22, 30, 58, 0.9));
+    }
+
+    .search {
+      flex: 1;
+      max-width: 380px;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(10, 14, 26, 0.5);
+      border: 2px solid var(--line);
+      border-radius: 999px;
+      padding: 0.5rem 1rem;
+      color: var(--muted);
+    }
+
+    .search input {
+      border: 0;
+      background: transparent;
+      color: var(--text);
+      width: 100%;
+      outline: 0;
+    }
+
+    .profile {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      border: 2px solid var(--gold);
+      background: linear-gradient(135deg, var(--primary), #7b5cbf);
+    }
+
+    .profile strong {
+      display: block;
+      font-family: var(--display);
+      font-size: 0.88rem;
+    }
+
+    .profile small {
+      color: var(--gold);
+      font-family: var(--hud);
+      font-size: 0.62rem;
+      text-transform: uppercase;
+    }
+
+    .content {
+      max-width: 1320px;
+      width: 100%;
+      margin-inline: auto;
+      padding: 3rem 1.75rem 2.5rem;
+      overflow: auto;
+      min-width: 0;
+    }
+
+    .page-title {
+      margin: 0 0 1.25rem;
+    }
+
+    .eyebrow {
+      margin: 0 0 0.4rem;
+      color: var(--accent);
+      font-family: var(--hud);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    h2 {
+      margin: 0 0 0.35rem;
+      font-family: var(--display);
+      font-size: clamp(1.5rem, 2.5vw, 2rem);
+      font-weight: 800;
+      color: var(--gold);
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin: 0;
+      font-size: 0.92rem;
+    }
+
+    .card {
+      position: relative;
+      min-width: 0;
+      background: linear-gradient(160deg, var(--surface-raised), var(--surface));
+      border: 2px solid var(--line);
+      border-radius: 18px;
+      padding: 1.1rem 1.15rem;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--accent), #7b5cbf);
+    }
+
+    .card h3 {
+      margin: 0 0 1rem;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-family: var(--hud);
+    }
+
+    .create-card {
+      margin-bottom: 1.25rem;
+    }
+
+    .form {
+      display: grid;
+      gap: 0.85rem;
+      max-width: 920px;
+    }
+
+    .form-fields {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.85rem;
+    }
+
+    label {
+      display: grid;
+      gap: 0.4rem;
+      color: var(--muted);
+      font-family: var(--display);
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    input,
+    select {
+      width: 100%;
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      background: rgba(10, 14, 26, 0.6);
+      color: var(--text);
+      padding: 0.65rem 0.8rem;
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      color: var(--text);
+    }
+
+    .checkbox-label input {
+      width: auto;
+      accent-color: var(--gold);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      padding: 0.65rem 1rem;
+      font-family: var(--display);
+      font-weight: 800;
+      font-size: 0.85rem;
+      cursor: pointer;
+      width: fit-content;
+    }
+
+    .btn.primary {
+      border: 0;
+      background: linear-gradient(180deg, #6ea8ff, var(--primary), #2563eb);
+      color: white;
+      box-shadow: 0 4px 0 #1e40af, 0 8px 24px rgba(79, 140, 255, 0.35);
+    }
+
+    .btn.ghost {
+      background: rgba(255, 255, 255, 0.04);
+      border: 2px solid rgba(79, 140, 255, 0.4);
+      color: var(--primary);
+    }
+
+    .lists {
+      display: grid;
+      gap: 1.25rem;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      margin-top: 0.25rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+    }
+
+    th,
+    td {
+      padding: 0.7rem 0.5rem;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: middle;
+      color: var(--text);
+    }
+
+    th {
+      color: #8aa4ff;
+      font-family: var(--hud);
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: rgba(79, 140, 255, 0.08);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 0.25rem 0.6rem;
+      font-family: var(--hud);
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+
+    .badge.stable {
+      background: var(--accent-soft);
+      border-color: rgba(214, 93, 177, 0.3);
+      color: var(--accent);
+    }
+
+    .footer {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.85rem 1.75rem;
+      border-top: 2px solid var(--gold-line);
+      color: var(--muted);
+      font-family: var(--hud);
+      font-size: 0.68rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      background: rgba(10, 14, 26, 0.9);
+    }
+
+    @media (max-width: 920px) {
+      .form-fields {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 820px) {
+      body { overflow: auto; }
+      .admin-app {
+        height: auto;
+        min-height: 100svh;
+        grid-template-columns: 1fr;
+      }
+      .sidebar {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        height: auto;
+        max-height: 42svh;
+        border-right: 0;
+        border-bottom: 2px solid var(--gold-line);
+      }
+      .nav {
+        grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+      }
+      .main {
+        height: auto;
+      }
+      .header {
+        flex-wrap: wrap;
+        padding-inline: 1rem;
+      }
+      .search {
+        max-width: none;
+        flex: 1 1 100%;
+        order: 3;
+      }
+      .content {
+        padding: 2rem 1rem 2.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="background"></div>
+
+  <div class="admin-app">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>MIND-SPHERE</h1>
+        <p>Command Center v4.0</p>
+      </div>
+
+      <nav class="nav">
+        <a href="#"><span class="material-symbols-outlined">hub</span>Neural Sync</a>
+        <a class="active" href="#"><span class="material-symbols-outlined">group</span>Usuarios y permisos</a>
+        <a href="#"><span class="material-symbols-outlined">analytics</span>Reportes</a>
+      </nav>
+
+      <div class="sidebar-actions">
+        <button class="emergency" type="button">EMERGENCY LOCKOUT</button>
+        <button class="logout" type="button">Cerrar sesion</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="header">
+        <label class="search">
+          <span class="material-symbols-outlined">search</span>
+          <input placeholder="Search parameters..." />
+        </label>
+
+        <div class="profile">
+          <div class="avatar"></div>
+          <div>
+            <strong>Superadmin Demo</strong>
+            <small>Chief Game Master</small>
+          </div>
+        </div>
+      </header>
+
+      <div class="content">
+        <header class="page-title">
+          <p class="eyebrow">REQ-01</p>
+          <h2>Gestion de usuarios y permisos</h2>
+          <p class="subtitle">Crea perfiles y asigna el flag de creador de casos a profesores autorizados.</p>
+        </header>
+
+        <article class="card create-card">
+          <h3>Crear usuario</h3>
+          <form class="form">
+            <label>
+              Tipo de usuario
+              <select>
+                <option>Profesor</option>
+                <option>Estudiante</option>
+              </select>
+            </label>
+
+            <div class="form-fields">
+              <label>Nombre <input /></label>
+              <label>Correo <input type="email" /></label>
+              <label>Contrasena <input type="password" /></label>
+              <label>Institucion <input /></label>
+              <label>Area <input /></label>
+              <label class="checkbox-label">
+                <input type="checkbox" />
+                Autorizado como creador de casos
+              </label>
+            </div>
+
+            <button class="btn primary" type="button">Registrar profesor</button>
+          </form>
+        </article>
+
+        <section class="lists">
+          <article class="card">
+            <h3>Profesores registrados</h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Correo</th>
+                    <th>Institucion</th>
+                    <th>Area</th>
+                    <th>Estado</th>
+                    <th>Creador de casos</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Maestro Demo</td>
+                    <td>maestro@demo.edu</td>
+                    <td>Universidad Demo</td>
+                    <td>Psicologia</td>
+                    <td><span class="badge stable">ACTIVE</span></td>
+                    <td><button class="btn ghost" type="button">Autorizar</button></td>
+                    <td><button class="btn ghost" type="button">Desactivar</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="card">
+            <h3>Estudiantes registrados</h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Correo</th>
+                    <th>Codigo</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Estudiante Demo</td>
+                    <td>estudiante@demo.edu</td>
+                    <td>EST-001</td>
+                    <td><span class="badge stable">ACTIVE</span></td>
+                    <td><button class="btn ghost" type="button">Desactivar</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+      </div>
+
+      <footer class="footer">
+        <span>MIND-SPHERE SYSTEMS</span>
+        <span>SIMULATION VER 4.0.2 · 2026 NEURAL LABS INC.</span>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

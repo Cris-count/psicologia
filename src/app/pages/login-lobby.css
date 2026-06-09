@@ -1,7 +1,8 @@
 :host {
   display: block;
-  min-height: 100vh;
-  overflow: hidden;
+  min-height: 100svh;
+  overflow-x: hidden;
+  overflow-y: auto;
   position: relative;
 }
 
@@ -16,10 +17,10 @@
 
 .lobby-character-layer app-guide-character {
   position: absolute;
-  bottom: -2%;
-  left: clamp(-4%, 2vw, 6%);
-  width: min(62vw, 680px);
-  height: min(94vh, 920px);
+  bottom: clamp(1.5rem, 5vh, 4.5rem);
+  left: clamp(-3rem, 2vw, 5rem);
+  width: min(58vw, 660px);
+  height: min(88svh, 860px);
   transform: translate(
     calc(var(--char-parallax-x, 0) * 14px),
     calc(var(--char-parallax-y, 0) * 8px)
@@ -43,10 +44,11 @@
 .lobby-shell {
   position: relative;
   z-index: 2;
-  min-height: 100vh;
+  min-height: 100svh;
   display: grid;
   grid-template-rows: auto 1fr auto;
   padding: 1rem clamp(1rem, 3vw, 2rem);
+  box-sizing: border-box;
 }
 
 .lobby-topbar,
@@ -123,20 +125,20 @@
 
 .lobby-stage {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 400px);
-  gap: clamp(2rem, 5vw, 4rem);
+  grid-template-columns: minmax(280px, 1fr) minmax(300px, 400px);
+  gap: clamp(1.5rem, 4vw, 4rem);
   align-items: center;
   max-width: 1180px;
   width: 100%;
   margin: auto;
   padding: 1rem 0 1.5rem;
-  min-height: min(680px, calc(100vh - 9rem));
+  min-height: min(680px, calc(100svh - 9rem));
 }
 
 .lobby-content {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: clamp(1rem, 2.4vh, 1.5rem);
   max-width: 420px;
   margin-left: auto;
   padding-right: clamp(0rem, 4vw, 2rem);
@@ -146,43 +148,6 @@
 .lobby-copy {
   position: relative;
   z-index: 2;
-}
-
-.lobby-npc-dialogue {
-  position: relative;
-  z-index: 3;
-  animation: title-rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
-}
-
-.npc-dialogue-inner {
-  padding: 0.9rem 1.15rem;
-  border: 1px solid rgba(244, 197, 66, 0.2);
-  border-left: 3px solid var(--psy-gold);
-  border-radius: var(--psy-radius-sm);
-  background: linear-gradient(135deg, rgba(19, 16, 42, 0.88), rgba(34, 28, 66, 0.75));
-  backdrop-filter: blur(16px);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
-}
-
-.npc-badge {
-  display: block;
-  margin-bottom: 0.35rem;
-  font-family: var(--psy-font-hud);
-  font-size: 0.58rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--psy-gold);
-}
-
-.npc-message {
-  margin: 0;
-  color: var(--psy-ink);
-  font-size: 0.95rem;
-  line-height: 1.55;
-}
-
-.lobby-title-block {
-  animation: title-rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .lobby-eyebrow {
@@ -228,6 +193,7 @@
 .login-portal {
   position: relative;
   align-self: center;
+  width: min(100%, 400px);
   animation: portal-enter 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
 }
 
@@ -429,7 +395,6 @@
 }
 
 .lobby-stats {
-  grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
@@ -440,7 +405,9 @@
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  padding: 0.75rem 1rem;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.72rem 1rem;
   border: 2px solid var(--psy-line);
   border-radius: var(--psy-radius-sm);
   background: rgba(22, 30, 58, 0.7);
@@ -554,6 +521,8 @@
     grid-template-columns: 1fr;
     max-width: 480px;
     min-height: auto;
+    gap: 1.25rem;
+    padding-block: 1rem;
   }
 
   .lobby-content {
@@ -563,18 +532,19 @@
     max-width: 100%;
   }
 
-  .lobby-npc-dialogue {
-    text-align: left;
+  .lobby-stats {
+    justify-content: center;
   }
 
   .lobby-character-layer app-guide-character {
     left: 50%;
+    bottom: 2vh;
     transform: translateX(-50%) translate(
       calc(var(--char-parallax-x, 0) * 8px),
       calc(var(--char-parallax-y, 0) * 5px)
     );
     width: min(95vw, 480px);
-    height: min(55vh, 520px);
+    height: min(48svh, 500px);
     opacity: 0.35;
   }
 
@@ -586,5 +556,107 @@
 
   .title-line {
     font-size: clamp(2rem, 9vw, 2.8rem);
+  }
+}
+
+@media (max-width: 560px) {
+  .lobby-shell {
+    padding: 0.85rem;
+  }
+
+  .lobby-topbar,
+  .lobby-footer {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .lobby-brand img {
+    width: 44px;
+    height: 44px;
+  }
+
+  .brand-title {
+    font-size: 0.98rem;
+  }
+
+  .brand-sub {
+    font-size: 0.52rem;
+  }
+
+  .lobby-top-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .lobby-tagline {
+    font-size: 0.92rem;
+  }
+
+  .portal-frame {
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .demo-panel {
+    font-size: 0.74rem;
+  }
+
+  .stat-chip {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-height: 760px) and (min-width: 901px) {
+  .lobby-shell {
+    padding-block: 0.75rem;
+  }
+
+  .lobby-stage {
+    min-height: auto;
+    padding-block: 0.75rem;
+  }
+
+  .lobby-brand img {
+    width: 44px;
+    height: 44px;
+  }
+
+  .title-line {
+    font-size: clamp(2.1rem, 4.6vw, 3.4rem);
+  }
+
+  .lobby-tagline,
+  .portal-header p {
+    font-size: 0.88rem;
+  }
+
+  .portal-frame {
+    gap: 0.85rem;
+    padding: 1rem;
+  }
+
+  .field-shell input {
+    height: 44px;
+  }
+
+  .portal-submit {
+    min-height: 48px;
+  }
+
+  .lobby-character-layer app-guide-character {
+    bottom: 1rem;
+    height: min(86svh, 760px);
+  }
+}
+
+@media (min-width: 1440px) {
+  .lobby-stage {
+    max-width: 1280px;
+  }
+
+  .lobby-character-layer app-guide-character {
+    left: clamp(1rem, 5vw, 8rem);
+    width: min(48vw, 700px);
   }
 }
