@@ -41,7 +41,7 @@ Requisitos: [Docker Desktop](https://www.docker.com/products/docker-desktop/) (o
 
 ### Produccion
 
-Construye la imagen y levanta la app con **nginx** (SPA con rutas de Angular):
+Construye la imagen y levanta la app con **nginx** (SPA con rutas de Angular) y el API de persistencia:
 
 ```bash
 docker compose build
@@ -49,6 +49,8 @@ docker compose up -d
 ```
 
 Abre **http://localhost:8080** (puerto configurable con `APP_PORT` en `.env`).
+
+La informacion academica del simulador se guarda en el volumen Docker `psicologo_data`, mediante el servicio `psicologo-api`. El archivo persistente queda dentro del contenedor/volumen como `/data/academy-store.json`, no en `localStorage` del navegador.
 
 Comandos utiles:
 
@@ -79,6 +81,7 @@ cp .env.example .env
 |----------|---------|-------------|
 | `APP_PORT` | `8080` | Puerto host para produccion |
 | `DEV_PORT` | `4200` | Puerto host para desarrollo |
+| `API_PORT` | `3000` | Puerto host del API de persistencia |
 
 ## Build manual
 
@@ -96,7 +99,8 @@ pnpm test
 ## Estructura Docker
 
 ```
-Dockerfile           # Multi-stage: deps → build → production (nginx) / development
-docker-compose.yml   # Servicios psicologo (prod) y psicologo-dev (perfil dev)
-docker/nginx.conf    # SPA fallback para rutas de Angular
+Dockerfile           # Multi-stage: deps -> build -> production (nginx) / development / api
+docker-compose.yml   # Servicios psicologo, psicologo-api y psicologo-dev (perfil dev)
+docker/nginx.conf    # SPA fallback para rutas de Angular y proxy /api
+docker/store-api.mjs # API Express que persiste el store academico en /data
 ```

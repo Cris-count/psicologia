@@ -52,41 +52,11 @@ import { AdminPlatformService } from '../../services/admin-platform.service';
 
         </a>
 
-        <a routerLink="/admin/licencias" routerLinkActive="active">
-
-          <span class="material-symbols-outlined" aria-hidden="true">verified</span>
-
-          Licencias
-
-        </a>
-
         <a routerLink="/admin/reportes" routerLinkActive="active">
 
           <span class="material-symbols-outlined" aria-hidden="true">analytics</span>
 
           Reportes
-
-        </a>
-
-        <a routerLink="/admin/logs" routerLinkActive="active">
-
-          <span class="material-symbols-outlined" aria-hidden="true">terminal</span>
-
-          System Logs
-
-        </a>
-
-      </nav>
-
-
-
-      <nav class="admin-nav" aria-label="Soporte">
-
-        <a routerLink="/admin/ayuda" routerLinkActive="active">
-
-          <span class="material-symbols-outlined" aria-hidden="true">help</span>
-
-          Help Center
 
         </a>
 

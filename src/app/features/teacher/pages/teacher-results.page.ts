@@ -134,8 +134,10 @@ export class TeacherResultsPage {
     return teacher ? this.data.groupsByTeacher(teacher.id) : [];
   });
 
+  readonly activeGroupId = computed(() => this.selectedGroupId || this.groups()[0]?.id || '');
+
   readonly resultRows = computed(() =>
-    this.selectedGroupId ? this.data.resultRowsForGroup(this.selectedGroupId) : [],
+    this.activeGroupId() ? this.data.resultRowsForGroup(this.activeGroupId()) : [],
   );
 
   readonly summary = computed(() => {

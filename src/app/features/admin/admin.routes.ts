@@ -18,21 +18,12 @@ export const ADMIN_ROUTES: Routes = [
         loadComponent: () => import('./pages/admin-users.page').then((m) => m.AdminUsersPage),
       },
       {
-        path: 'licencias',
-        loadComponent: () => import('./pages/admin-licenses.page').then((m) => m.AdminLicensesPage),
-      },
-      {
         path: 'reportes',
         loadComponent: () => import('./pages/admin-reports.page').then((m) => m.AdminReportsPage),
       },
-      {
-        path: 'logs',
-        loadComponent: () => import('./pages/admin-logs.page').then((m) => m.AdminLogsPage),
-      },
-      {
-        path: 'ayuda',
-        loadComponent: () => import('./pages/admin-help.page').then((m) => m.AdminHelpPage),
-      },
+      { path: 'licencias', redirectTo: 'resumen', pathMatch: 'full' },
+      { path: 'logs', redirectTo: 'resumen', pathMatch: 'full' },
+      { path: 'ayuda', redirectTo: 'resumen', pathMatch: 'full' },
       // Catálogo académico (situaciones) pasa al módulo Profesor según REQ-02
       { path: 'situaciones', redirectTo: 'usuarios', pathMatch: 'full' },
       { path: 'escenarios', redirectTo: 'resumen', pathMatch: 'full' },

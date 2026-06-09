@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
 import { APP_LOGO_PATH, APP_NAME } from '../../../core/branding.constants';
+import { AcademyDataService } from '../../../services/academy-data.service';
 import { GameAnimateDirective } from '../../../shared/directives/game-animate.directive';
 import { TeacherProfileService } from '../../../shared/guide/services/teacher-profile.service';
 import { GameHudComponent } from '../../../shared/ui/game-hud/game-hud.component';
@@ -77,6 +78,27 @@ export class TeacherShellComponent implements OnInit {
   protected readonly appName = APP_NAME;
   protected readonly appLogo = APP_LOGO_PATH;
   protected readonly navItems = TEACHER_NAV_ITEMS;
+
+  readonly teacherStats = computed(() => {
+    const teacher = this.auth.currentUser();
+    return teacher ? this.data.teacherStats(teacher.id) : undefined;
+  });
+
+  readonly teacherLevel = computed(() => {
+    const stats = this.teacherStats();
+    if (!stats) return 1;
+    return Math.max(1, stats.publishedCases + stats.groups + stats.tasks);
+  });
+
+  readonly teacherXpPercent = computed(() => {
+    const teacher = this.auth.currentUser();
+    if (!teacher) return 0;
+    const groupIds = new Set(this.data.groupsByTeacher(teacher.id).map((group) => group.id));
+    const taskIds = new Set(this.data.store().groupTasks.filter((task) => groupIds.has(task.groupId)).map((task) => task.id));
+    const progressRows = this.data.store().studentProgress.filter((progress) => taskIds.has(progress.taskId));
+    if (!progressRows.length) return 0;
+    return Math.round(progressRows.reduce((sum, progress) => sum + progress.progressPercentage, 0) / progressRows.length);
+  });
 
   ngOnInit(): void {
     this.auth.ensureAuthenticatedOrRedirect();

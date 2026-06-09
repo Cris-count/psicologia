@@ -22,3 +22,8 @@ FROM deps AS development
 COPY . .
 EXPOSE 4200
 CMD ["pnpm", "exec", "ng", "serve", "--host", "0.0.0.0", "--port", "4200", "--poll", "2000"]
+
+FROM deps AS api
+COPY . .
+EXPOSE 3000
+CMD ["node", "docker/store-api.mjs"]

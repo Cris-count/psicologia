@@ -1,0 +1,825 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MIND-SPHERE | Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&family=Orbitron:wght@600;700;800&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,500,0,0" rel="stylesheet" />
+  <style>
+    :root {
+      color-scheme: dark;
+      --psy-primary: #6b8cff;
+      --psy-accent: #d65db1;
+      --psy-accent-soft: #e889c8;
+      --psy-purple: #7b5cbf;
+      --psy-gold: #f4c542;
+      --psy-gold-dark: #d4a82e;
+      --psy-bg: #13102a;
+      --psy-bg-mid: #1a1535;
+      --psy-bg-soft: #221c42;
+      --psy-ink: #f4f0fa;
+      --psy-muted: #b8aed4;
+      --psy-line: rgba(155, 143, 217, 0.18);
+      --psy-border-gold: rgba(244, 197, 66, 0.38);
+      --psy-success: #52c9a8;
+      --psy-danger: #e86a7a;
+      --psy-radius-sm: 12px;
+      --psy-radius-lg: 24px;
+      --psy-radius-pill: 999px;
+      --psy-font-display: "Fredoka", "Nunito", ui-sans-serif, sans-serif;
+      --psy-font-body: "Nunito", ui-sans-serif, system-ui, sans-serif;
+      --psy-font-hud: "Orbitron", "Nunito", ui-sans-serif, sans-serif;
+      --psy-shadow-glow-blue: 0 0 20px rgba(107, 140, 255, 0.22);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      overflow: hidden;
+      font-family: var(--psy-font-body);
+      color: var(--psy-ink);
+      background: var(--psy-bg);
+    }
+
+    .three-background {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 14% 18%, rgba(79, 195, 255, 0.18), transparent 30%),
+        radial-gradient(circle at 82% 22%, rgba(214, 93, 177, 0.16), transparent 31%),
+        radial-gradient(circle at 55% 78%, rgba(123, 92, 191, 0.18), transparent 38%),
+        linear-gradient(145deg, #0d0a21 0%, #161135 48%, #0c1026 100%);
+    }
+
+    .three-background::before {
+      content: "";
+      position: absolute;
+      inset: -20%;
+      background-image:
+        linear-gradient(rgba(107, 140, 255, 0.11) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(107, 140, 255, 0.11) 1px, transparent 1px);
+      background-size: 74px 74px;
+      transform: perspective(700px) rotateX(58deg) translateY(18%);
+      transform-origin: center bottom;
+      opacity: 0.22;
+      animation: grid-drift 18s linear infinite;
+    }
+
+    .three-background::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 50% 35%, transparent 0 18%, rgba(19, 16, 42, 0.2) 46%, rgba(6, 5, 16, 0.76) 100%),
+        linear-gradient(180deg, rgba(255,255,255,0.03), transparent 30%);
+      pointer-events: none;
+    }
+
+    .bg-node {
+      position: absolute;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #4fc3ff;
+      box-shadow: 0 0 18px #4fc3ff;
+      opacity: 0.55;
+      animation: float-node 7s ease-in-out infinite;
+    }
+    .bg-node:nth-child(1) { left: 18%; top: 24%; }
+    .bg-node:nth-child(2) { left: 73%; top: 31%; background: var(--psy-accent); box-shadow: 0 0 18px var(--psy-accent); animation-delay: -1.4s; }
+    .bg-node:nth-child(3) { left: 54%; top: 64%; background: var(--psy-gold); box-shadow: 0 0 16px var(--psy-gold); animation-delay: -3s; }
+    .bg-node:nth-child(4) { left: 88%; top: 70%; animation-delay: -4.6s; }
+
+    .lobby-character-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .lobby-character-glow {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 55%;
+      height: 45%;
+      background:
+        radial-gradient(ellipse 70% 50% at 35% 85%, rgba(79, 195, 255, 0.18), transparent),
+        radial-gradient(ellipse 50% 40% at 25% 70%, rgba(123, 92, 191, 0.12), transparent);
+      filter: blur(24px);
+    }
+
+    .nexa-anchor {
+      position: absolute;
+      bottom: -2%;
+      left: clamp(-4%, 2vw, 6%);
+      width: min(62vw, 680px);
+      height: min(94vh, 920px);
+      pointer-events: none;
+      user-select: none;
+      overflow: visible;
+    }
+
+    .nexa-atmosphere {
+      position: absolute;
+      inset: -15% -10% -5%;
+      z-index: 0;
+    }
+
+    .nexa-fog {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(40px);
+      opacity: 0.25;
+    }
+    .nexa-fog-low {
+      bottom: 5%;
+      left: 10%;
+      width: 80%;
+      height: 30%;
+      background: radial-gradient(ellipse, rgba(79, 195, 255, 0.2), transparent 70%);
+    }
+    .nexa-fog-mid {
+      top: 20%;
+      right: 0;
+      width: 50%;
+      height: 40%;
+      background: radial-gradient(circle, rgba(123, 92, 191, 0.15), transparent 68%);
+    }
+    .nexa-neural-ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid rgba(79, 195, 255, 0.2);
+      top: 18%;
+      right: 8%;
+      width: 28%;
+      aspect-ratio: 1;
+      animation: ring-spin 14s linear infinite;
+    }
+    .nexa-neural-ring.ring-2 {
+      width: 36%;
+      top: 14%;
+      right: 4%;
+      border-color: rgba(214, 93, 177, 0.15);
+      border-style: dashed;
+      animation-duration: 22s;
+      animation-direction: reverse;
+    }
+    .nexa-particle {
+      position: absolute;
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: #4fc3ff;
+      box-shadow: 0 0 8px #4fc3ff;
+      opacity: 0.45;
+      animation: float-node 5s ease-in-out infinite;
+    }
+    .p2 { background: #d65db1; box-shadow: 0 0 8px #d65db1; }
+    .p3 { background: #f4c542; box-shadow: 0 0 6px #f4c542; width: 2px; height: 2px; }
+    .p4 { width: 2px; height: 2px; }
+    .p5 { background: #9b8fd9; box-shadow: 0 0 6px #9b8fd9; }
+    .p6 { background: #52c9a8; width: 2px; height: 2px; }
+
+    .nexa-rig {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      animation: gary-idle 5.5s ease-in-out infinite;
+    }
+    .nexa-contact-shadow {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 65%;
+      height: 6%;
+      border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(0, 0, 0, 0.55), transparent 70%);
+      filter: blur(8px);
+      z-index: 1;
+      opacity: 0.45;
+    }
+    .nexa-rig-body {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .nexa-sprite {
+      width: auto;
+      height: 100%;
+      max-width: 100%;
+      object-fit: contain;
+      object-position: center bottom;
+      display: block;
+      filter: drop-shadow(0 8px 24px rgba(79, 195, 255, 0.12)) drop-shadow(0 20px 40px rgba(0, 0, 0, 0.5));
+    }
+    .nexa-holo-orb {
+      position: absolute;
+      top: 26%;
+      right: 14%;
+      width: 16%;
+      aspect-ratio: 1;
+      z-index: 6;
+      display: grid;
+      place-items: center;
+    }
+    .nexa-holo-core {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(79, 195, 255, 0.5), transparent 65%);
+      filter: blur(2px);
+      animation: glow-pulse 2.8s ease-in-out infinite;
+    }
+    .nexa-holo-orb svg {
+      position: absolute;
+      width: 70%;
+      height: 70%;
+    }
+
+    .lobby-shell {
+      position: relative;
+      z-index: 2;
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: 1rem clamp(1rem, 3vw, 2rem);
+    }
+
+    .lobby-topbar,
+    .lobby-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .lobby-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+      color: inherit;
+    }
+    .lobby-brand img {
+      width: 52px;
+      height: 52px;
+      filter: drop-shadow(0 4px 10px rgba(244, 197, 66, 0.22));
+    }
+    .brand-title {
+      display: block;
+      font-family: var(--psy-font-display);
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      color: var(--psy-gold);
+      text-shadow: 0 2px 10px rgba(244, 197, 66, 0.18);
+    }
+    .brand-sub {
+      display: block;
+      font-family: var(--psy-font-hud);
+      font-size: 0.58rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--psy-accent);
+    }
+    .lobby-top-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .icon-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      min-height: 40px;
+      padding: 0 0.85rem;
+      border: 2px solid var(--psy-line);
+      border-radius: var(--psy-radius-pill);
+      background: rgba(34, 28, 66, 0.75);
+      color: var(--psy-muted);
+      font-family: var(--psy-font-hud);
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .icon-chip[aria-pressed="true"] {
+      border-color: var(--psy-accent-soft);
+      color: var(--psy-accent-soft);
+      box-shadow: 0 0 12px rgba(214, 93, 177, 0.15);
+    }
+
+    .lobby-stage {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 400px);
+      gap: clamp(2rem, 5vw, 4rem);
+      align-items: center;
+      max-width: 1180px;
+      width: 100%;
+      margin: auto;
+      padding: 1rem 0 1.5rem;
+      min-height: min(680px, calc(100vh - 9rem));
+    }
+    .lobby-content {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+      max-width: 420px;
+      margin-left: auto;
+      padding-right: clamp(0rem, 4vw, 2rem);
+      animation: title-rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    .lobby-eyebrow {
+      margin: 0 0 0.75rem;
+      font-family: var(--psy-font-hud);
+      font-size: 0.68rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--psy-accent);
+    }
+    .lobby-title {
+      margin: 0;
+      font-family: var(--psy-font-display);
+      line-height: 0.95;
+    }
+    .title-line {
+      display: block;
+      font-size: clamp(2.4rem, 5.5vw, 4.2rem);
+      font-weight: 800;
+      color: var(--psy-ink);
+      text-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+    }
+    .title-accent {
+      background: linear-gradient(135deg, var(--psy-gold), var(--psy-accent), var(--psy-purple));
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: title-shimmer 8s linear infinite;
+    }
+    .lobby-tagline {
+      margin: 1rem 0 0;
+      max-width: 480px;
+      color: var(--psy-muted);
+      font-size: 1.05rem;
+      line-height: 1.6;
+    }
+    .lobby-npc-dialogue {
+      position: relative;
+      z-index: 3;
+      animation: title-rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
+    }
+    .npc-dialogue-inner {
+      padding: 0.9rem 1.15rem;
+      border: 1px solid rgba(244, 197, 66, 0.2);
+      border-left: 3px solid var(--psy-gold);
+      border-radius: var(--psy-radius-sm);
+      background: linear-gradient(135deg, rgba(19, 16, 42, 0.88), rgba(34, 28, 66, 0.75));
+      backdrop-filter: blur(16px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    }
+    .npc-badge {
+      display: block;
+      margin-bottom: 0.35rem;
+      font-family: var(--psy-font-hud);
+      font-size: 0.58rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--psy-gold);
+    }
+    .npc-message {
+      margin: 0;
+      color: var(--psy-ink);
+      font-size: 0.95rem;
+      line-height: 1.55;
+    }
+
+    .login-portal {
+      position: relative;
+      align-self: center;
+      animation: portal-enter 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+    }
+    .portal-glow {
+      position: absolute;
+      inset: -20%;
+      background: radial-gradient(circle, rgba(107, 140, 255, 0.12), transparent 65%);
+      filter: blur(40px);
+      animation: glow-pulse 5s ease-in-out infinite;
+      pointer-events: none;
+    }
+    .portal-frame {
+      position: relative;
+      display: grid;
+      gap: 1.25rem;
+      padding: clamp(1.25rem, 3vw, 2rem);
+      border: 2px solid var(--psy-border-gold);
+      border-radius: var(--psy-radius-lg);
+      background: linear-gradient(165deg, rgba(42, 36, 78, 0.94), rgba(26, 21, 53, 0.92));
+      box-shadow: 0 8px 0 rgba(0, 0, 0, 0.28), 0 20px 48px rgba(0, 0, 0, 0.4), 0 0 24px rgba(107, 140, 255, 0.08);
+      backdrop-filter: blur(20px);
+      transform: translateZ(40px);
+    }
+    .portal-frame::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      border-radius: var(--psy-radius-lg) var(--psy-radius-lg) 0 0;
+      background: linear-gradient(90deg, var(--psy-primary), var(--psy-accent), var(--psy-gold), var(--psy-purple));
+      background-size: 200% auto;
+      animation: title-shimmer 3s linear infinite;
+    }
+    .portal-header h2 {
+      margin: 0.5rem 0 0.35rem;
+      font-family: var(--psy-font-display);
+      font-size: 1.6rem;
+      color: var(--psy-gold);
+    }
+    .portal-header p {
+      margin: 0;
+      color: var(--psy-muted);
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .portal-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.3rem 0.65rem;
+      border-radius: var(--psy-radius-pill);
+      border: 1px solid rgba(52, 211, 153, 0.45);
+      background: rgba(52, 211, 153, 0.12);
+      color: var(--psy-success);
+      font-family: var(--psy-font-hud);
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+    }
+    .portal-badge::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--psy-success);
+      box-shadow: 0 0 8px var(--psy-success);
+      animation: game-pulse-dot 1.6s ease-out infinite;
+    }
+    .portal-form {
+      display: grid;
+      gap: 1rem;
+    }
+    .portal-field {
+      display: grid;
+      gap: 0.45rem;
+      font-family: var(--psy-font-display);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--psy-muted);
+    }
+    .field-label-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+    .field-label-row a {
+      color: var(--psy-accent);
+      text-decoration: none;
+      font-size: 0.78rem;
+    }
+    .field-shell {
+      position: relative;
+      display: block;
+    }
+    .field-shell input {
+      width: 100%;
+      height: 50px;
+      padding: 0 2.75rem 0 1rem;
+      border: 2px solid var(--psy-line);
+      border-radius: var(--psy-radius-sm);
+      background: rgba(10, 14, 26, 0.7);
+      color: var(--psy-ink);
+      outline: none;
+      transition: all 0.2s ease;
+      font: inherit;
+    }
+    .field-shell input:focus {
+      border-color: var(--psy-accent);
+      box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.2), 0 0 24px rgba(0, 229, 255, 0.15);
+      transform: translateY(-2px);
+    }
+    .field-shell .material-symbols-outlined {
+      position: absolute;
+      right: 0.85rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--psy-muted);
+      pointer-events: none;
+    }
+    .portal-submit {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      min-height: 56px;
+      border: 0;
+      border-radius: var(--psy-radius-sm);
+      background: linear-gradient(180deg, #ffe066 0%, var(--psy-gold) 45%, var(--psy-gold-dark) 100%);
+      color: #1a1040;
+      font-family: var(--psy-font-display);
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      box-shadow: 0 6px 0 #b8860b, 0 12px 32px rgba(255, 201, 71, 0.35);
+      cursor: pointer;
+    }
+    .demo-panel {
+      display: grid;
+      gap: 0.2rem;
+      padding: 0.85rem;
+      border-radius: var(--psy-radius-sm);
+      border-left: 4px solid var(--psy-accent);
+      background: rgba(0, 229, 255, 0.06);
+      color: var(--psy-muted);
+      font-size: 0.82rem;
+    }
+    .demo-panel strong {
+      color: var(--psy-accent);
+      font-family: var(--psy-font-display);
+    }
+    .lobby-stats {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      animation: title-rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both;
+    }
+    .stat-chip {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.75rem 1rem;
+      border: 2px solid var(--psy-line);
+      border-radius: var(--psy-radius-sm);
+      background: rgba(22, 30, 58, 0.7);
+      backdrop-filter: blur(12px);
+    }
+    .stat-chip .material-symbols-outlined {
+      color: var(--psy-gold);
+      font-size: 1.4rem;
+    }
+    .stat-chip strong {
+      display: block;
+      font-family: var(--psy-font-display);
+      font-size: 1.1rem;
+      color: var(--psy-gold);
+    }
+    .stat-chip small {
+      color: var(--psy-muted);
+      font-family: var(--psy-font-hud);
+      font-size: 0.58rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .lobby-footer {
+      font-family: var(--psy-font-hud);
+      font-size: 0.62rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--psy-muted);
+      padding-top: 0.5rem;
+      border-top: 1px solid var(--psy-line);
+    }
+
+    @keyframes title-rise {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes portal-enter {
+      from { opacity: 0; transform: translateX(40px) scale(0.95); }
+      to { opacity: 1; transform: translateX(0) scale(1); }
+    }
+    @keyframes title-shimmer { to { background-position: 200% center; } }
+    @keyframes glow-pulse {
+      0%, 100% { opacity: 0.35; }
+      50% { opacity: 0.55; }
+    }
+    @keyframes game-pulse-dot {
+      0% { box-shadow: 0 0 0 0 rgba(82, 201, 168, 0.65); }
+      100% { box-shadow: 0 0 0 9px rgba(82, 201, 168, 0); }
+    }
+    @keyframes gary-idle {
+      0%, 100% { transform: translateY(0) rotate(-0.5deg); }
+      50% { transform: translateY(-8px) rotate(0.5deg); }
+    }
+    @keyframes ring-spin { to { transform: rotate(360deg); } }
+    @keyframes float-node {
+      0%, 100% { transform: translateY(0); opacity: 0.45; }
+      50% { transform: translateY(-16px); opacity: 0.8; }
+    }
+    @keyframes grid-drift { to { background-position: 74px 74px; } }
+
+    @media (max-width: 900px) {
+      body { overflow: auto; }
+      .lobby-stage {
+        grid-template-columns: 1fr;
+        max-width: 480px;
+        min-height: auto;
+      }
+      .lobby-content {
+        margin-inline: auto;
+        padding-right: 0;
+        text-align: center;
+        max-width: 100%;
+      }
+      .lobby-npc-dialogue { text-align: left; }
+      .nexa-anchor {
+        left: 50%;
+        transform: translateX(-50%);
+        width: min(95vw, 480px);
+        height: min(55vh, 520px);
+        opacity: 0.35;
+      }
+      .lobby-character-glow {
+        width: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+      .title-line { font-size: clamp(2rem, 9vw, 2.8rem); }
+      .lobby-topbar,
+      .lobby-footer { align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="three-background" aria-hidden="true">
+    <span class="bg-node"></span>
+    <span class="bg-node"></span>
+    <span class="bg-node"></span>
+    <span class="bg-node"></span>
+  </div>
+
+  <div class="lobby-character-layer" aria-hidden="true">
+    <div class="lobby-character-glow"></div>
+    <div class="nexa-anchor presentation-stage mood-happy" role="img" aria-label="GARY, guía mental de MIND-SPHERE">
+      <div class="nexa-atmosphere">
+        <div class="nexa-fog nexa-fog-low"></div>
+        <div class="nexa-fog nexa-fog-mid"></div>
+        <div class="nexa-neural-ring ring-1"></div>
+        <div class="nexa-neural-ring ring-2"></div>
+        <span class="nexa-particle p1" style="top:18%;left:12%"></span>
+        <span class="nexa-particle p2" style="top:35%;left:78%"></span>
+        <span class="nexa-particle p3" style="top:55%;left:8%"></span>
+        <span class="nexa-particle p4" style="top:70%;left:65%"></span>
+        <span class="nexa-particle p5" style="top:42%;left:45%"></span>
+        <span class="nexa-particle p6" style="top:28%;left:88%"></span>
+      </div>
+      <div class="nexa-rig">
+        <div class="nexa-contact-shadow"></div>
+        <div class="nexa-rig-body">
+          <img class="nexa-sprite" src="../../public/assets/guide/nexa-hero-premium-cutout.png" alt="" width="768" height="1024" />
+        </div>
+        <div class="nexa-holo-orb">
+          <div class="nexa-holo-core"></div>
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <path d="M50 18 C38 18 30 28 30 38 C26 40 24 44 24 50 C24 58 30 64 36 66 C34 72 38 80 44 84 C48 88 54 88 58 86 C64 88 70 84 74 78 C78 72 80 64 78 58 C84 56 90 50 90 42 C90 36 88 32 84 30 C84 22 76 18 66 18 C62 12 56 10 50 10 C44 10 38 12 34 18 Z" fill="none" stroke="rgba(79,195,255,0.7)" stroke-width="2" />
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <main class="lobby-shell">
+    <header class="lobby-topbar">
+      <a class="lobby-brand" href="/login" aria-label="MIND-SPHERE">
+        <img src="../../public/mind-sphere-logo.svg" alt="" aria-hidden="true" />
+        <div>
+          <span class="brand-title">MIND-SPHERE</span>
+          <span class="brand-sub">Neural Mind Engine</span>
+        </div>
+      </a>
+      <div class="lobby-top-actions">
+        <button type="button" class="icon-chip" aria-pressed="true">
+          <span class="material-symbols-outlined" aria-hidden="true">volume_up</span>
+          <span>SFX</span>
+        </button>
+        <button type="button" class="icon-chip" aria-label="Idioma español">
+          <span class="material-symbols-outlined" aria-hidden="true">language</span>
+          <span>ES</span>
+        </button>
+      </div>
+    </header>
+
+    <section class="lobby-stage" aria-label="Pantalla de inicio de MIND-SPHERE">
+      <div class="lobby-content">
+        <div class="lobby-copy">
+          <p class="lobby-eyebrow">Simulador psicológico futurista premium</p>
+          <h1 class="lobby-title">
+            <span class="title-line">ENTRA A</span>
+            <span class="title-line title-accent">MIND-SPHERE</span>
+          </h1>
+          <p class="lobby-tagline">Casos clínicos · Retroalimentación · Progreso gamificado</p>
+        </div>
+
+        <div class="lobby-npc-dialogue" role="region" aria-label="Diálogo de GARY">
+          <div class="npc-dialogue-inner">
+            <span class="npc-badge">GARY · Guía Mental</span>
+            <p class="npc-message">Bienvenido a MIND-SPHERE. Inicia sesión y deja que el sistema active tu ruta mental.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="login-portal">
+        <div class="portal-glow" aria-hidden="true"></div>
+        <div class="portal-frame">
+          <div class="portal-header">
+            <span class="portal-badge">ONLINE</span>
+            <h2>Iniciar sesión</h2>
+            <p>Un solo acceso. El sistema detecta tu rol automáticamente.</p>
+          </div>
+
+          <form class="portal-form">
+            <label class="portal-field" for="login-email">
+              Correo institucional
+              <span class="field-shell">
+                <input id="login-email" name="email" type="email" autocomplete="email" placeholder="nombre@institucion.edu" required />
+                <span class="material-symbols-outlined" aria-hidden="true">badge</span>
+              </span>
+            </label>
+
+            <label class="portal-field" for="login-password">
+              <span class="field-label-row">
+                Contraseña
+                <a href="#">¿Olvidaste tu clave?</a>
+              </span>
+              <span class="field-shell">
+                <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required />
+                <span class="material-symbols-outlined" aria-hidden="true">lock</span>
+              </span>
+            </label>
+
+            <button class="portal-submit" type="button">
+              <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
+              JUGAR AHORA
+            </button>
+          </form>
+
+          <div class="demo-panel" aria-label="Credenciales demo">
+            <strong>Demo — usa cualquier rol</strong>
+            <span>superadmin@demo.edu · maestro@demo.edu · estudiante@demo.edu</span>
+            <span>Contraseña: demo123</span>
+          </div>
+        </div>
+      </div>
+
+      <aside class="lobby-stats" aria-label="Estadísticas del servidor">
+        <div class="stat-chip">
+          <span class="material-symbols-outlined" aria-hidden="true">groups</span>
+          <div>
+            <strong>1,284</strong>
+            <small>Jugadores activos</small>
+          </div>
+        </div>
+        <div class="stat-chip">
+          <span class="material-symbols-outlined" aria-hidden="true">bolt</span>
+          <div>
+            <strong>99.9%</strong>
+            <small>Uptime neural</small>
+          </div>
+        </div>
+        <div class="stat-chip">
+          <span class="material-symbols-outlined" aria-hidden="true">verified</span>
+          <div>
+            <strong>v4.0.2</strong>
+            <small>Build estable</small>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <footer class="lobby-footer">
+      <span>System Status: Optimal</span>
+      <span>2026 NEURAL LABS INC.</span>
+    </footer>
+  </main>
+</body>
+</html>

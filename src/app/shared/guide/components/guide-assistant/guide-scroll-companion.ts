@@ -1,5 +1,3 @@
-import gsap from 'gsap';
-
 export interface GuideScrollCompanionOptions {
   maxLift?: number;
   parallaxRatio?: number;
@@ -86,7 +84,6 @@ export function attachGuideScrollCompanion(
     return () => element.classList.remove('guide-scroll-active', 'guide-scroll-reduced');
   }
 
-  const setTransform = gsap.quickSetter(element, 'transform', 'px');
   element.classList.add('guide-scroll-active');
 
   const state: MotionState = { y: 0, x: 0, lean: 0, scale: 1 };
@@ -151,9 +148,7 @@ export function attachGuideScrollCompanion(
     scrollVelocity = lerp(scrollVelocity, 0, 0.12);
     nudgeBoost = lerp(nudgeBoost, 0, 0.08);
 
-    setTransform(
-      `translate3d(${state.x.toFixed(2)}px, ${state.y.toFixed(2)}px, 0) rotate(${state.lean.toFixed(3)}deg) scale(${state.scale.toFixed(4)})`,
-    );
+    element.style.transform = `translate3d(${state.x.toFixed(2)}px, ${state.y.toFixed(2)}px, 0) rotate(${state.lean.toFixed(3)}deg) scale(${state.scale.toFixed(4)})`;
 
     rafId = requestAnimationFrame(tick);
   };
@@ -193,7 +188,7 @@ export function attachGuideScrollCompanion(
     window.removeEventListener('load', scheduleRescan);
     observer?.disconnect();
     element.classList.remove('guide-scroll-active', 'guide-scroll-reduced');
-    gsap.set(element, { clearProps: 'transform' });
+    element.style.transform = '';
     delete (element as HTMLElement & { __guideScrollApi?: ScrollCompanionApi }).__guideScrollApi;
   };
 }

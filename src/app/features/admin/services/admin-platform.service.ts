@@ -8,67 +8,145 @@ import {
   SystemLogEntry,
 } from '../data/admin-api.contracts';
 
-/**
- * Métricas de plataforma. Datos mock alineados al dashboard Figma;
- * sustituir por GET /api/admin/* en integración backend.
- */
 @Injectable({ providedIn: 'root' })
 export class AdminPlatformService {
   private readonly data = inject(AcademyDataService);
-  private readonly logSeed = signal<SystemLogEntry[]>(this.buildInitialLogs());
+  private readonly manualLogs = signal<SystemLogEntry[]>([]);
 
   readonly metrics = computed<AdminDashboardMetrics>(() => {
-    this.data.store();
-    const teachers = this.data.allTeachers().filter((user) => user.status === 'ACTIVE').length;
-    const students = this.data.allStudents().filter((user) => user.status === 'ACTIVE').length;
-    const managed = teachers + students;
+    const store = this.data.store();
+    const managedUsers = store.users.filter((user) => user.role !== 'SUPERADMIN').length;
+    const activeModules = this.moduleStatusRows().filter((node) => node.status === 'online').length;
+    const totalModules = this.moduleStatusRows().length;
+    const inactiveUsers = store.users.filter((user) => user.role !== 'SUPERADMIN' && user.status === 'INACTIVE').length;
+    const hasEmptyCoreData =
+      !store.users.length ||
+      !store.groups.length ||
+      !store.situations.length ||
+      !store.groupTasks.length;
+
     return {
-      activeNodes: '12 / 12',
-      activeNodesStatus: this.data.isEmergencyLockoutActive() ? 'critical' : 'stable',
-      managedUsers: managed,
-      userGrowthPercent: 12,
-      activeLicenses: Math.max(85, Math.round(managed * 0.07)),
-      syncAlerts: this.data.isEmergencyLockoutActive() ? 3 : 0,
+      activeNodes: `${activeModules} / ${totalModules}`,
+      activeNodesStatus: this.data.isEmergencyLockoutActive() || hasEmptyCoreData ? 'warning' : 'stable',
+      managedUsers,
+      userGrowthPercent: this.completionPercent(store.studentProgress),
+      activeLicenses: store.users.filter((user) => user.status === 'ACTIVE').length,
+      syncAlerts: inactiveUsers + (this.data.isEmergencyLockoutActive() ? 1 : 0),
     };
   });
 
-  readonly serverNodes = signal<ServerNodeStatus[]>([
-    { id: 'alpha', name: 'Nodo Alpha', location: 'Bogotá DC', latencyMs: 12, loadPercent: 42, status: 'online' },
-    { id: 'beta', name: 'Nodo Beta', location: 'Medellín', latencyMs: 18, loadPercent: 67, status: 'online' },
-    { id: 'gamma', name: 'Nodo Gamma', location: 'Cali', latencyMs: 0, loadPercent: 0, status: 'maintenance' },
-  ]);
+  readonly serverNodes = computed<ServerNodeStatus[]>(() => this.moduleStatusRows());
 
-  readonly licenseSummary = signal<LicenseSummary>({
-    totalIssued: 142,
-    expiringSoon: 8,
-    expiringLabel: '8 licencias vencen en los próximos 30 días',
+  readonly licenseSummary = computed<LicenseSummary>(() => {
+    const store = this.data.store();
+    const activeUsers = store.users.filter((user) => user.status === 'ACTIVE').length;
+    const inactiveUsers = store.users.filter((user) => user.status === 'INACTIVE').length;
+    return {
+      totalIssued: store.users.length,
+      expiringSoon: inactiveUsers,
+      expiringLabel: inactiveUsers
+        ? `${inactiveUsers} usuarios inactivos requieren revision`
+        : `${activeUsers} usuarios activos sin alertas de licencia`,
+    };
   });
 
-  readonly institutionalReports = signal<InstitutionalReportRow[]>([
-    { institution: 'Universidad Nacional', sessions: 420, efficiencyPercent: 94, statusLabel: 'Premium', statusTone: 'premium' },
-    { institution: 'UniGermana', sessions: 210, efficiencyPercent: 88, statusLabel: 'Full Access', statusTone: 'full' },
-    { institution: 'Campus Piloto', sessions: 56, efficiencyPercent: 72, statusLabel: 'Trial', statusTone: 'trial' },
-  ]);
+  readonly institutionalReports = computed<InstitutionalReportRow[]>(() => {
+    const store = this.data.store();
+    const institutions = new Map<
+      string,
+      { teacherIds: Set<string>; studentIds: Set<string>; taskIds: Set<string>; progress: number[] }
+    >();
+
+    for (const profile of store.teacherProfiles) {
+      const institution = profile.institution || 'Sin institucion';
+      const row = institutions.get(institution) ?? {
+        teacherIds: new Set<string>(),
+        studentIds: new Set<string>(),
+        taskIds: new Set<string>(),
+        progress: [],
+      };
+      row.teacherIds.add(profile.userId);
+      institutions.set(institution, row);
+    }
+
+    for (const group of store.groups) {
+      const teacherProfile = store.teacherProfiles.find((profile) => profile.userId === group.teacherId);
+      const institution = teacherProfile?.institution || 'Sin institucion';
+      const row = institutions.get(institution) ?? {
+        teacherIds: new Set<string>(),
+        studentIds: new Set<string>(),
+        taskIds: new Set<string>(),
+        progress: [],
+      };
+      row.teacherIds.add(group.teacherId);
+
+      for (const membership of store.groupStudents.filter((item) => item.groupId === group.id)) {
+        row.studentIds.add(membership.studentId);
+      }
+
+      for (const task of store.groupTasks.filter((item) => item.groupId === group.id)) {
+        row.taskIds.add(task.id);
+        for (const progress of store.studentProgress.filter((item) => item.taskId === task.id)) {
+          row.progress.push(progress.progressPercentage);
+        }
+      }
+
+      institutions.set(institution, row);
+    }
+
+    return [...institutions.entries()]
+      .map(([institution, row]) => {
+        const sessions = row.taskIds.size + row.progress.length;
+        const efficiencyPercent = row.progress.length
+          ? Math.round(row.progress.reduce((sum, value) => sum + value, 0) / row.progress.length)
+          : 0;
+        const statusTone: 'premium' | 'full' | 'trial' =
+          efficiencyPercent >= 80 ? 'premium' : sessions > 0 ? 'full' : 'trial';
+        return {
+          institution,
+          sessions,
+          efficiencyPercent,
+          statusLabel: statusTone === 'premium' ? 'Alto uso' : statusTone === 'full' ? 'En uso' : 'Sin progreso',
+          statusTone,
+        };
+      })
+      .sort((a, b) => b.sessions - a.sessions || a.institution.localeCompare(b.institution));
+  });
 
   readonly logs = computed(() => {
-    this.data.store();
-    const lockout = this.data.isEmergencyLockoutActive();
-    const base = this.logSeed();
-    if (!lockout) {
-      return base;
-    }
-    return [
+    const store = this.data.store();
+    const generated: SystemLogEntry[] = [
       {
-        timestamp: new Date().toISOString(),
-        level: 'error' as const,
-        message: 'EMERGENCY_LOCKOUT activo — sesiones docentes suspendidas',
+        timestamp: store.platformSettings?.updatedAt ?? new Date().toISOString(),
+        level: this.data.isEmergencyLockoutActive() ? 'error' : 'info',
+        message: this.data.isEmergencyLockoutActive()
+          ? 'Bloqueo de emergencia activo'
+          : 'Bloqueo de emergencia inactivo',
       },
-      ...base,
+      {
+        timestamp: this.latestTimestamp(store.users.map((item) => item.updatedAt || item.createdAt)),
+        level: 'info',
+        message: `${store.users.length} usuarios registrados en el sistema`,
+      },
+      {
+        timestamp: this.latestTimestamp(store.situations.map((item) => item.updatedAt || item.createdAt)),
+        level: store.situations.some((item) => item.status === 'DRAFT') ? 'warn' : 'info',
+        message: `${store.situations.length} casos en catalogo, ${
+          store.situations.filter((item) => item.status === 'PUBLISHED').length
+        } publicados`,
+      },
+      {
+        timestamp: this.latestTimestamp(store.groupTasks.map((item) => item.assignedAt)),
+        level: 'info',
+        message: `${store.groupTasks.length} tareas asignadas a grupos`,
+      },
     ];
+
+    return [...this.manualLogs(), ...generated].sort((a, b) => b.timestamp.localeCompare(a.timestamp)).slice(0, 40);
   });
 
   appendLog(entry: SystemLogEntry): void {
-    this.logSeed.update((items) => [entry, ...items].slice(0, 40));
+    this.manualLogs.update((items) => [entry, ...items].slice(0, 20));
   }
 
   triggerEmergencyLockout(): void {
@@ -81,12 +159,61 @@ export class AdminPlatformService {
     });
   }
 
-  private buildInitialLogs(): SystemLogEntry[] {
+  private moduleStatusRows(): ServerNodeStatus[] {
+    const store = this.data.store();
+    const activeUsers = store.users.filter((user) => user.status === 'ACTIVE').length;
+    const inactiveUsers = store.users.filter((user) => user.status === 'INACTIVE').length;
+    const publishedSituations = store.situations.filter((item) => item.status === 'PUBLISHED').length;
+    const draftSituations = store.situations.filter((item) => item.status === 'DRAFT').length;
+    const activeGroups = store.groups.filter((group) => group.status === 'ACTIVE').length;
+    const completedProgress = store.studentProgress.filter((progress) => progress.completed).length;
+
     return [
-      { timestamp: '2026-05-26T13:00:00Z', level: 'info', message: 'Sincronización de nodos completada' },
-      { timestamp: '2026-05-26T12:45:00Z', level: 'info', message: 'Catálogo académico indexado correctamente' },
-      { timestamp: '2026-05-26T12:30:00Z', level: 'warn', message: 'Nodo Gamma en mantenimiento programado' },
-      { timestamp: '2026-05-26T12:00:00Z', level: 'info', message: 'REQ-01: política de roles verificada' },
+      {
+        id: 'users',
+        name: 'Usuarios y permisos',
+        location: `${activeUsers} activos · ${inactiveUsers} inactivos`,
+        latencyMs: 0,
+        loadPercent: this.percent(activeUsers, Math.max(store.users.length, 1)),
+        status: activeUsers ? 'online' : 'offline',
+      },
+      {
+        id: 'content',
+        name: 'Catalogo academico',
+        location: `${publishedSituations} publicados · ${draftSituations} borradores`,
+        latencyMs: 0,
+        loadPercent: this.percent(publishedSituations, Math.max(store.situations.length, 1)),
+        status: publishedSituations ? 'online' : store.situations.length ? 'maintenance' : 'offline',
+      },
+      {
+        id: 'groups',
+        name: 'Grupos y tareas',
+        location: `${activeGroups} grupos activos · ${store.groupTasks.length} tareas`,
+        latencyMs: 0,
+        loadPercent: this.percent(store.groupTasks.length, Math.max(activeGroups, 1)),
+        status: activeGroups && store.groupTasks.length ? 'online' : activeGroups ? 'maintenance' : 'offline',
+      },
+      {
+        id: 'progress',
+        name: 'Respuestas y progreso',
+        location: `${store.studentAnswers.length} respuestas · ${completedProgress} progresos completos`,
+        latencyMs: 0,
+        loadPercent: this.completionPercent(store.studentProgress),
+        status: store.studentProgress.length || store.studentAnswers.length ? 'online' : 'maintenance',
+      },
     ];
+  }
+
+  private percent(value: number, total: number): number {
+    return Math.max(0, Math.min(100, Math.round((value / total) * 100)));
+  }
+
+  private completionPercent(progressRows: Array<{ progressPercentage: number }>): number {
+    if (!progressRows.length) return 0;
+    return Math.round(progressRows.reduce((sum, item) => sum + item.progressPercentage, 0) / progressRows.length);
+  }
+
+  private latestTimestamp(values: string[]): string {
+    return values.filter(Boolean).sort((a, b) => b.localeCompare(a))[0] ?? new Date().toISOString();
   }
 }
