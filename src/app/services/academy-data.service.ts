@@ -1,9 +1,17 @@
 import { isPlatformBrowser } from '@angular/common';
 import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
+import { DEFAULT_AVATAR_ID, normalizeAvatarId } from '../shared/guide/data/avatar.catalog';
+import {
+  DEFAULT_TEACHER_AVATAR_ID,
+  normalizeTeacherAvatarId,
+} from '../shared/guide/data/teacher-avatar.catalog';
 import {
   AcademyStore,
   AnswerOption,
+  AvatarAccessories,
+  AvatarAppearance,
   AvatarId,
+  TeacherAvatarId,
   Difficulty,
   GameGroup,
   GroupTask,
@@ -21,6 +29,10 @@ import {
   TaskDraft,
   User,
 } from '../models/academy.models';
+import { normalizeAccessories } from '../shared/guide/data/accessory.catalog';
+import { normalizeAppearance } from '../shared/guide/data/appearance.catalog';
+import { migrateLegacyLook, normalizeAvatarLook } from '../shared/guide/data/avatar-studio.catalog';
+import type { AvatarLook } from '../shared/guide/data/avatar-look.types';
 
 const STORE_KEY = 'academic-case-simulator-store-v3';
 
@@ -120,6 +132,33 @@ export class AcademyDataService {
         profile.userId === userId ? { ...profile, canCreateCases } : profile,
       ),
     });
+  }
+
+  updateTeacherGameProfile(
+    userId: string,
+    patch: {
+      avatarId?: TeacherAvatarId;
+      characterName?: string;
+      avatarConfigured?: boolean;
+    },
+  ): boolean {
+    const profile = this.teacherProfileFor(userId);
+    if (!profile) return false;
+    if (patch.characterName !== undefined && patch.characterName.trim().length < 2) return false;
+    this.commit({
+      ...this.store(),
+      teacherProfiles: this.store().teacherProfiles.map((p) =>
+        p.userId === userId
+          ? {
+              ...p,
+              ...patch,
+              characterName:
+                patch.characterName !== undefined ? patch.characterName.trim() : p.characterName,
+            }
+          : p,
+      ),
+    });
+    return true;
   }
 
   isEmergencyLockoutActive(): boolean {
@@ -359,7 +398,7 @@ export class AcademyDataService {
           userId: user.id,
           code: code.trim() || `EST-${Date.now()}`,
           nickname: '',
-          avatarId: 'neural-01',
+          avatarId: DEFAULT_AVATAR_ID,
           onboardingCompleted: false,
           createdAt: now,
         },
@@ -450,7 +489,16 @@ export class AcademyDataService {
 
   updateStudentGameProfile(
     userId: string,
-    patch: { nickname?: string; avatarId?: AvatarId; onboardingCompleted?: boolean },
+    patch: {
+      nickname?: string;
+      characterName?: string;
+      avatarId?: AvatarId;
+      avatarLook?: AvatarLook;
+      rpmAvatarUrl?: string;
+      accessories?: AvatarAccessories;
+      appearance?: AvatarAppearance;
+      onboardingCompleted?: boolean;
+    },
   ): boolean {
     const profile = this.studentProfileFor(userId);
     if (!profile) return false;
@@ -775,11 +823,21 @@ export class AcademyDataService {
       teacherProfiles: store.teacherProfiles.map((profile) => ({
         ...profile,
         canCreateCases: profile.canCreateCases ?? false,
+        avatarId: normalizeTeacherAvatarId(profile.avatarId),
+        characterName: profile.characterName ?? '',
+        avatarConfigured: profile.avatarConfigured ?? false,
       })),
       studentProfiles: store.studentProfiles.map((p) => ({
         ...p,
         nickname: p.nickname ?? '',
-        avatarId: p.avatarId ?? 'neural-01',
+        avatarId: normalizeAvatarId(p.avatarId),
+        characterName: p.characterName ?? '',
+        avatarLook: p.avatarLook
+          ? normalizeAvatarLook(p.avatarLook)
+          : migrateLegacyLook({ appearance: p.appearance, accessories: p.accessories }),
+        rpmAvatarUrl: p.rpmAvatarUrl?.trim() || undefined,
+        accessories: normalizeAccessories(p.accessories),
+        appearance: normalizeAppearance(p.appearance),
         onboardingCompleted: p.onboardingCompleted ?? false,
       })),
       platformSettings: store.platformSettings ?? {
@@ -940,7 +998,7 @@ export class AcademyDataService {
           userId: student.id,
           code: 'EST-001',
           nickname: '',
-          avatarId: 'neural-01',
+          avatarId: DEFAULT_AVATAR_ID,
           onboardingCompleted: false,
           createdAt: now,
         },

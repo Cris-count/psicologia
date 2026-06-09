@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { GameGroup, GroupTask } from '../../../models/academy.models';
 import { AcademyDataService } from '../../../services/academy-data.service';
 import { AuthService } from '../../../services/auth.service';
@@ -18,6 +19,7 @@ import { ClinicalMissionComponent } from '../mission/clinical-mission.component'
   imports: [
     CommonModule,
     FormsModule,
+    RouterLink,
     ThreeBackgroundComponent,
     GameProgressComponent,
     GameHudComponent,
@@ -31,12 +33,13 @@ import { ClinicalMissionComponent } from '../mission/clinical-mission.component'
       @if (view !== 'task') {
         <app-game-hud
           [eyebrow]="'Estudiante · ' + pageTitle()"
-          [title]="profile.displayName()"
-          [subtitle]="pageIntro()"
+          [title]="profile.characterName()"
+          [subtitle]="'@' + profile.displayName()"
           [level]="7"
           [xpPercent]="progressPercent()"
-          [avatarId]="profile.profile()?.avatarId ?? null"
+          [avatarId]="profile.avatarId()"
         >
+          <a class="ghost-button hud-customize" routerLink="/student/perfil" hudActions>Personalizar</a>
           <app-game-logout-button hudActions label="Salir" [compact]="true" />
         </app-game-hud>
 
@@ -143,6 +146,12 @@ import { ClinicalMissionComponent } from '../mission/clinical-mission.component'
         .student-with-guide {
           padding-bottom: clamp(0.5rem, 4vh, 2rem);
         }
+      }
+
+      .hud-customize {
+        font-size: 0.78rem;
+        padding: 0.45rem 0.75rem;
+        white-space: nowrap;
       }
     `,
   ],

@@ -154,6 +154,15 @@
   color: var(--psy-gold);
 }
 
+.player-card-preview .card-tag {
+  display: block;
+  margin-top: 0.2rem;
+  font-family: var(--psy-font-hud);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  color: var(--psy-accent);
+}
+
 .nickname-status.ok {
   color: var(--psy-success);
   font-weight: 700;
@@ -162,6 +171,31 @@
 .nickname-status.bad {
   color: var(--psy-danger);
   font-weight: 700;
+}
+
+.accessories-intro {
+  margin-bottom: 1rem;
+}
+
+.accessories-layout {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.accessories-preview {
+  margin-bottom: 0;
+}
+
+.identity-layout {
+  display: grid;
+  gap: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .identity-layout {
+    grid-template-columns: auto 1fr;
+    align-items: start;
+  }
 }
 
 @media (max-width: 900px) {

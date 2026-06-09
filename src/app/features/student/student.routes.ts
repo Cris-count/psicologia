@@ -30,6 +30,16 @@ export const STUDENT_ROUTES: Routes = [
 
       {
 
+        path: 'perfil',
+
+        loadComponent: () => import('./pages/student-customize.page').then((m) => m.StudentCustomizePage),
+
+        canActivate: [studentProfileGuard],
+
+      },
+
+      {
+
         path: '',
 
         loadComponent: () => import('./pages/student-home.page').then((m) => m.StudentHomePage),
