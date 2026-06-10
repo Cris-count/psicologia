@@ -22,6 +22,13 @@ interface ScrollCompanionApi {
   nudge: () => void;
 }
 
+type GuideScrollElement = HTMLElement & { __guideScrollApi?: ScrollCompanionApi };
+
+function scrollApi(element: HTMLElement | null | undefined): ScrollCompanionApi | undefined {
+  if (!element) return undefined;
+  return (element as GuideScrollElement).__guideScrollApi;
+}
+
 const DEFAULTS: Required<Omit<GuideScrollCompanionOptions, 'scrollRoot'>> = {
   maxLift: 168,
   parallaxRatio: 0.22,
@@ -168,7 +175,7 @@ export function attachGuideScrollCompanion(
   };
 
   const api: ScrollCompanionApi = { setSpeaking, nudge };
-  (element as HTMLElement & { __guideScrollApi?: ScrollCompanionApi }).__guideScrollApi = api;
+  (element as GuideScrollElement).__guideScrollApi = api;
 
   // Capture phase catches scroll from nested containers, not only the window.
   document.addEventListener('scroll', onScroll, { passive: true, capture: true });
@@ -194,14 +201,24 @@ export function attachGuideScrollCompanion(
     observer?.disconnect();
     element.classList.remove('guide-scroll-active', 'guide-scroll-reduced');
     gsap.set(element, { clearProps: 'transform' });
-    delete (element as HTMLElement & { __guideScrollApi?: ScrollCompanionApi }).__guideScrollApi;
+    delete (element as GuideScrollElement).__guideScrollApi;
   };
 }
 
-export function setGuideScrollSpeaking(element: HTMLElement | undefined, active: boolean): void {
-  (element as HTMLElement & { __guideScrollApi?: ScrollCompanionApi }).__guideScrollApi?.setSpeaking(active);
+export function setGuideScrollSpeaking(element: HTMLElement | null | undefined, active: boolean): void {
+  if (!element) return;
+  try {
+    scrollApi(element)?.setSpeaking(active);
+  } catch (error) {
+    console.error('Gary Error', error);
+  }
 }
 
-export function nudgeGuideScrollCompanion(element: HTMLElement | undefined): void {
-  (element as HTMLElement & { __guideScrollApi?: ScrollCompanionApi }).__guideScrollApi?.nudge();
+export function nudgeGuideScrollCompanion(element: HTMLElement | null | undefined): void {
+  if (!element) return;
+  try {
+    scrollApi(element)?.nudge();
+  } catch (error) {
+    console.error('Gary Error', error);
+  }
 }

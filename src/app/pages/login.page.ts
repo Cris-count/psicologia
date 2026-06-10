@@ -7,6 +7,7 @@ import { AuthService } from '../services/auth.service';
 import { GuideCharacterComponent } from '../shared/guide/components/guide-character/guide-character.component';
 import { GuideService } from '../shared/guide/services/guide.service';
 import { StudentProfileService } from '../shared/guide/services/student-profile.service';
+import { PresenceService } from '../services/presence.service';
 import { GameLoaderService } from '../shared/services/game-loader.service';
 import { GameSfxService } from '../shared/services/game-sfx.service';
 import { ThreeBackgroundComponent } from '../shared/ui/three-background/three-background.component';
@@ -138,34 +139,21 @@ import { ThreeBackgroundComponent } from '../shared/ui/three-background/three-ba
           </div>
         </div>
 
-        <aside class="lobby-stats" aria-label="Estadísticas del servidor">
-          <div class="stat-chip">
-            <span class="material-symbols-outlined" aria-hidden="true">groups</span>
-            <div>
-              <strong>1,284</strong>
-              <small>Jugadores activos</small>
-            </div>
-          </div>
-          <div class="stat-chip">
-            <span class="material-symbols-outlined" aria-hidden="true">bolt</span>
-            <div>
-              <strong>99.9%</strong>
-              <small>Uptime neural</small>
-            </div>
-          </div>
-          <div class="stat-chip">
-            <span class="material-symbols-outlined" aria-hidden="true">verified</span>
-            <div>
-              <strong>v4.0.2</strong>
-              <small>Build estable</small>
-            </div>
-          </div>
-        </aside>
       </section>
 
       <footer class="lobby-footer">
-        <span>System Status: Optimal</span>
-        <span>2026 NEURAL LABS INC.</span>
+        <aside class="lobby-active-users" aria-label="Jugadores activos en tiempo real">
+          <div class="active-users-card" [class.is-live]="presence.connected()">
+            <span class="material-symbols-outlined" aria-hidden="true">groups</span>
+            <div class="active-users-data">
+              <strong>{{ presence.activeCount() }}</strong>
+              <small>Jugadores activos</small>
+            </div>
+            <span class="live-indicator" aria-hidden="true"></span>
+          </div>
+        </aside>
+        <span class="footer-status">System Status: Optimal</span>
+        <span class="footer-copy">2026 NEURAL LABS INC.</span>
       </footer>
     </main>
   `,
@@ -182,6 +170,7 @@ export class LoginPage implements OnInit {
   protected readonly guide = inject(GuideService);
   private readonly studentProfile = inject(StudentProfileService);
   protected readonly sfx = inject(GameSfxService);
+  protected readonly presence = inject(PresenceService);
 
   email = '';
   password = '';

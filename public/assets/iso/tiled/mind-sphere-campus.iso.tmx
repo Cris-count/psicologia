@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.10.2" orientation="isometric" renderorder="right-down" width="48" height="48" tilewidth="128" tileheight="64" infinite="0">
+ <tileset source="../tilesets/campus-premium.tsj"/>
+ <layer id="1" name="Ground" width="48" height="48"/>
+ <layer id="2" name="Paths" width="48" height="48"/>
+ <layer id="3" name="Nature" width="48" height="48"/>
+ <layer id="4" name="Collision" width="48" height="48"/>
+ <objectgroup id="5" name="Buildings"/>
+ <objectgroup id="6" name="Props"/>
+ <objectgroup id="7" name="Lighting"/>
+ <objectgroup id="8" name="NPCs"/>
+ <objectgroup id="9" name="Interaction"/>
+</map>

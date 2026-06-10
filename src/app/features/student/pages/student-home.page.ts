@@ -1,8 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { GameGroup, GroupTask } from '../../../models/academy.models';
-import { AcademyDataService } from '../../../services/academy-data.service';
+import { AcademyDataService, DEMO_STUDENT_ID, DEMO_TASK_ID } from '../../../services/academy-data.service';
 import { AuthService } from '../../../services/auth.service';
 import { GameAnimateDirective } from '../../../shared/directives/game-animate.directive';
 import { GuideService } from '../../../shared/guide/services/guide.service';
@@ -26,7 +26,9 @@ import { ClinicalMissionComponent } from '../mission/clinical-mission.component'
     ClinicalMissionComponent,
   ],
   template: `
-    <app-three-background [intensity]="view === 'task' ? 'login' : 'ambient'" />
+    @if (view !== 'task') {
+      <app-three-background intensity="ambient" />
+    }
     <div class="student-shell student-with-guide" [class.mission-mode]="view === 'task'">
       @if (view !== 'task') {
         <app-game-hud
@@ -85,7 +87,14 @@ import { ClinicalMissionComponent } from '../mission/clinical-mission.component'
           </div>
 
           <section class="panel">
-            <h2>Misiones del grupo</h2>
+            <div class="tasks-panel-head">
+              <h2>Misiones del grupo</h2>
+              @if (isDemoStudent()) {
+                <button type="button" class="ghost-button reset-demo-btn" (click)="resetDemoSimulator()">
+                  Reiniciar simulador demo
+                </button>
+              }
+            </div>
             <div class="task-list">
               @for (task of tasks(); track task.id) {
                 <button class="task-row" type="button" (click)="openTask(task.id)">
@@ -106,14 +115,18 @@ import { ClinicalMissionComponent } from '../mission/clinical-mission.component'
         </section>
       }
 
-      @if (view === 'task') {
-        @if (selectedTask(); as task) {
+      @if (view === 'task' && selectedTask(); as task) {
+        @for (session of [missionSession()]; track session) {
           <app-clinical-mission
             [task]="task"
             [groupName]="selectedGroup()?.name ?? 'Misión'"
-            (exitMission)="showTasks()"
+            [onExit]="handleExitMission"
           />
         }
+      } @else if (view === 'task') {
+        <div class="mission-entry-loader">
+          <p>No se pudo cargar la misión. <button type="button" class="ghost-button" (click)="showTasks()">Volver</button></p>
+        </div>
       }
     </div>
   `,
@@ -144,6 +157,37 @@ import { ClinicalMissionComponent } from '../mission/clinical-mission.component'
           padding-bottom: clamp(0.5rem, 4vh, 2rem);
         }
       }
+
+      .mission-entry-loader {
+        display: grid;
+        place-items: center;
+        min-height: 50vh;
+        font-family: var(--psy-font-hud);
+        font-size: 0.75rem;
+        letter-spacing: 0.08em;
+        color: var(--psy-muted);
+      }
+
+      .tasks-panel-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-bottom: 0.85rem;
+      }
+
+      .tasks-panel-head h2 {
+        margin: 0;
+      }
+
+      .reset-demo-btn {
+        font-size: 0.72rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--psy-gold);
+        border-color: rgba(244, 197, 66, 0.45);
+      }
     `,
   ],
 })
@@ -151,6 +195,12 @@ export class StudentHomePage implements OnInit {
   view: 'groups' | 'tasks' | 'task' = 'groups';
   selectedGroupId = '';
   selectedTaskId = '';
+
+  readonly missionSession = signal(0);
+
+  readonly handleExitMission = (): void => {
+    this.showTasks();
+  };
 
   constructor(
     public readonly data: AcademyDataService,
@@ -160,9 +210,11 @@ export class StudentHomePage implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    console.log('Student module loaded');
     this.auth.ensureAuthenticatedOrRedirect();
     this.guide.setVisible(true);
     this.syncGuideContext();
+    console.log('Student home ready · view:', this.view, '· groups:', this.groups().length);
   }
 
   pageTitle(): string {
@@ -211,7 +263,8 @@ export class StudentHomePage implements OnInit {
     this.scrollContentTop();
     this.syncGuideContext();
     this.guide.setVisible(true);
-    this.guide.show('Misión clínica iniciada. Explora el mapa mental y toma decisiones en cada zona.', 'encourage');
+    this.guide.show('Misión clínica iniciada. Explora el campus y toma decisiones en cada zona.', 'encourage');
+    console.log('Student · opening task', taskId);
   }
 
   showGroups(): void {
@@ -266,6 +319,20 @@ export class StudentHomePage implements OnInit {
 
   pendingTasksForGroup(groupId: string): number {
     return this.tasksForGroup(groupId).filter((task) => !this.progress(task.id).completed).length;
+  }
+
+  isDemoStudent(): boolean {
+    return this.student()?.id === DEMO_STUDENT_ID;
+  }
+
+  resetDemoSimulator(): void {
+    this.data.resetDemoStudentProgress();
+    this.missionSession.update((n) => n + 1);
+    if (this.view === 'task') {
+      this.guide.show('Progreso demo borrado. La misión vuelve a empezar desde el briefing.', 'encourage');
+    } else {
+      this.guide.show('Simulador demo reiniciado. Abre la misión para jugar desde cero.', 'encourage');
+    }
   }
 
   progressPercent(): number {

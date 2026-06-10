@@ -59,6 +59,17 @@ export interface GroupStudent {
   joinedAt: string;
 }
 
+/** Identificador del mapa 2D del simulador (ver game2d/map.registry). */
+export type MapEnvironmentKey =
+  | 'attention-routes'
+  | 'clinical-office'
+  | 'university-campus'
+  | 'hospital'
+  | 'research-lab'
+  | 'mind-campus';
+
+export type InteractableKindKey = 'npc' | 'terminal' | 'patient' | 'desk' | 'portal' | 'door';
+
 export interface Situation {
   id: string;
   title: string;
@@ -70,6 +81,8 @@ export interface Situation {
   status: SituationStatus;
   createdById: string;
   resources?: string;
+  /** Mundo 2D donde se desarrolla la misión */
+  mapEnvironment?: MapEnvironmentKey;
   createdAt: string;
   updatedAt: string;
 }
@@ -81,6 +94,8 @@ export interface Scenario {
   context: string;
   instructions: string;
   orderIndex: number;
+  /** Punto interactivo en el mapa (NPC, terminal, paciente, etc.) */
+  interactableKind?: InteractableKindKey;
   createdAt: string;
 }
 
@@ -179,6 +194,7 @@ export interface SituationDraft {
   difficulty: Difficulty;
   category: SituationCategory;
   resources?: string;
+  mapEnvironment?: MapEnvironmentKey;
 }
 
 export interface ScenarioDraft {
@@ -186,4 +202,5 @@ export interface ScenarioDraft {
   context: string;
   instructions: string;
   dialogues?: string;
+  interactableKind?: InteractableKindKey;
 }

@@ -17,8 +17,14 @@ export class GuideService {
   private readonly hintIndex = signal(0);
   private readonly activeQuestion = signal<Question | null>(null);
   private readonly activeScenario = signal<Scenario | null>(null);
+  private readonly missionActiveState = signal(false);
+  private readonly casePanelActiveState = signal(false);
+  private readonly hintBubbleOpenState = signal(false);
 
   readonly visible = this.visibleState.asReadonly();
+  readonly missionActive = this.missionActiveState.asReadonly();
+  readonly casePanelActive = this.casePanelActiveState.asReadonly();
+  readonly hintBubbleOpen = this.hintBubbleOpenState.asReadonly();
   readonly context = this.contextState.asReadonly();
   readonly mood = this.moodState.asReadonly();
 
@@ -51,6 +57,25 @@ export class GuideService {
     this.visibleState.set(visible);
   }
 
+  setMissionActive(active: boolean): void {
+    this.missionActiveState.set(active);
+    if (!active) this.setCasePanelActive(false);
+  }
+
+  /** Panel de escenario abierto: Gary no debe tapar preguntas. */
+  setCasePanelActive(active: boolean): void {
+    this.casePanelActiveState.set(active);
+    if (active) {
+      this.hintBubbleOpenState.set(false);
+      this.customMessage.set(null);
+    }
+  }
+
+  closeHintBubble(): void {
+    this.hintBubbleOpenState.set(false);
+    this.customMessage.set(null);
+  }
+
   toggle(): void {
     this.visibleState.update((v) => !v);
   }
@@ -58,7 +83,9 @@ export class GuideService {
   setQuestionContext(question: Question, scenario?: Scenario): void {
     this.activeQuestion.set(question);
     this.activeScenario.set(scenario ?? null);
-    this.setContext('student_question');
+    if (!this.casePanelActiveState()) {
+      this.setContext('student_question');
+    }
   }
 
   requestHint(): string {
@@ -68,17 +95,20 @@ export class GuideService {
       const idx = this.hintIndex() % hints.length;
       this.hintIndex.set(idx + 1);
       const hint = hints[idx];
+      this.hintBubbleOpenState.set(true);
       this.show(hint, 'thinking');
       this.contextState.set('student_hint');
       return hint;
     }
     const fallback = 'Tómate un momento para releer el enunciado y el contexto del caso.';
+    this.hintBubbleOpenState.set(true);
     this.show(fallback, 'encourage');
     return fallback;
   }
 
   situationHint(context: string): string {
     const hint = hintsForSituation(context);
+    this.hintBubbleOpenState.set(true);
     this.show(hint, 'thinking');
     return hint;
   }

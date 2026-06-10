@@ -30,8 +30,11 @@ import {
   styleUrl: './guide-assistant.component.css',
   host: {
     '[class.guide-dock-right]': 'dock() === "right"',
-    '[class.guide-dock-left]': 'dock() === "left"',
+    '[class.guide-dock-left]': 'dock() === "left" || guide.missionActive()',
     '[class.guide-presence-student]': 'presence() === "student"',
+    '[class.guide-mission-active]': 'guide.missionActive()',
+    '[class.guide-case-panel-active]': 'guide.casePanelActive()',
+    '[style.z-index]': 'guide.casePanelActive() ? 8 : guide.missionActive() ? 100 : 50',
   },
   imports: [GuideCharacterComponent],
   template: `
@@ -48,20 +51,21 @@ import {
       >
         <!-- Personaje libre en la escena (sin caja) -->
         <div class="guide-npc-presence" aria-hidden="false">
-          <div class="guide-npc-floor-glow" aria-hidden="true"></div>
           <app-guide-character [mood]="guide.displayMood()" [presentation]="presentation()" />
         </div>
 
-        <!-- Burbuja de diálogo separada -->
-        @if (displayedText() || isTyping()) {
+        @if (shouldShowBubble()) {
           <div
             class="guide-speech-bubble"
             [class.bubble-speaking]="isTyping() || speakingPulse()"
             role="region"
             aria-live="polite"
           >
-            @if (!inline()) {
+            @if (!inline() && !guide.casePanelActive()) {
               <button type="button" class="bubble-dismiss" (click)="guide.setVisible(false)" aria-label="Ocultar guía">×</button>
+            }
+            @if (guide.casePanelActive()) {
+              <button type="button" class="bubble-dismiss bubble-dismiss--flat" (click)="guide.closeHintBubble()" aria-label="Cerrar consejo">×</button>
             }
 
             <div class="bubble-inner">
@@ -113,10 +117,20 @@ export class GuideAssistantComponent implements OnDestroy {
   });
 
   readonly scrollCompanionActive = computed(
-    () => this.presence() === 'student' && !this.inline() && isPlatformBrowser(this.platformId),
+    () =>
+      this.presence() === 'student' &&
+      !this.inline() &&
+      !this.guide.missionActive() &&
+      isPlatformBrowser(this.platformId),
   );
 
   readonly hintRequested = output<void>();
+
+  readonly shouldShowBubble = computed(() => {
+    if (!this.guide.visible()) return false;
+    if (this.guide.casePanelActive() && !this.guide.hintBubbleOpen()) return false;
+    return Boolean(this.displayedText() || this.isTyping());
+  });
 
   readonly displayedText = signal('');
   readonly isTyping = signal(false);
@@ -130,53 +144,71 @@ export class GuideAssistantComponent implements OnDestroy {
 
   constructor() {
     effect(() => {
-      this.startTyping(this.guide.message());
+      try {
+        this.startTyping(this.guide.message());
+      } catch (error) {
+        console.error('Gary Error', error);
+      }
     });
 
     effect(() => {
       const speaking = this.isTyping() || this.speakingPulse();
-      setGuideScrollSpeaking(this.companionSceneEl ?? undefined, speaking);
+      const el = this.companionSceneEl;
+      if (!el) return;
+      setGuideScrollSpeaking(el, speaking);
     });
 
     effect(() => {
       const context = this.guide.context();
-      if (this.companionSceneEl) nudgeGuideScrollCompanion(this.companionSceneEl);
+      const el = this.companionSceneEl;
+      if (el) nudgeGuideScrollCompanion(el);
       void context;
     });
 
     effect(() => {
       const message = this.guide.message();
-      if (this.companionSceneEl && message) nudgeGuideScrollCompanion(this.companionSceneEl);
+      const el = this.companionSceneEl;
+      if (el && message) nudgeGuideScrollCompanion(el);
       void message;
     });
 
     effect((onCleanup) => {
-      const active = this.scrollCompanionActive() && this.guide.visible();
-      const scene = this.sceneRef()?.nativeElement ?? null;
+      try {
+        const active = this.scrollCompanionActive() && this.guide.visible();
+        const scene = this.sceneRef()?.nativeElement ?? null;
 
-      if (!active || !scene) {
+        if (!active || !scene) {
+          this.destroyScrollCompanion();
+          onCleanup(() => this.destroyScrollCompanion());
+          return;
+        }
+
+        if (this.companionSceneEl === scene && this.detachScrollCompanion) return;
+
         this.destroyScrollCompanion();
-        onCleanup(() => this.destroyScrollCompanion());
-        return;
+        this.companionSceneEl = scene;
+        this.detachScrollCompanion = attachGuideScrollCompanion(scene, {
+          maxLift: this.hero() ? 140 : 168,
+          parallaxRatio: 0.22,
+          smoothness: 0.085,
+          scrollRoot: this.resolveScrollRoot?.() ?? document.body,
+        });
+        setGuideScrollSpeaking(scene, this.isTyping() || this.speakingPulse());
+      } catch (error) {
+        console.error('Gary Error', error);
+        this.destroyScrollCompanion();
       }
-
-      if (this.companionSceneEl === scene && this.detachScrollCompanion) return;
-
-      this.destroyScrollCompanion();
-      this.companionSceneEl = scene;
-      this.detachScrollCompanion = attachGuideScrollCompanion(scene, {
-        maxLift: this.hero() ? 140 : 168,
-        parallaxRatio: 0.22,
-        smoothness: 0.085,
-        scrollRoot: this.resolveScrollRoot?.() ?? document.body,
-      });
 
       onCleanup(() => this.destroyScrollCompanion());
     });
   }
 
   private destroyScrollCompanion(): void {
-    this.detachScrollCompanion?.();
+    try {
+      this.detachScrollCompanion?.();
+    } catch (error) {
+      console.error('Gary Error', error);
+    }
     this.detachScrollCompanion = undefined;
     this.companionSceneEl = null;
   }

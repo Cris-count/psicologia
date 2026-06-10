@@ -1,0 +1,24 @@
+{
+  "frameWidth": 64,
+  "frameHeight": 64,
+  "dirs": [
+    "down",
+    "up",
+    "left",
+    "right"
+  ],
+  "framesPerDir": 9,
+  "idle": [
+    0,
+    1,
+    2
+  ],
+  "walk": [
+    3,
+    4,
+    5
+  ],
+  "interact": 6,
+  "think": 7,
+  "celebrate": 8
+}
