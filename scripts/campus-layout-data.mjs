@@ -147,6 +147,14 @@ const decorBase = [
   { sprite: 'prop-bush', x: 24, y: 12, scale: 0.78 },
   { sprite: 'prop-bench', x: 12, y: 18, scale: 0.78 },
   { sprite: 'prop-bench', x: 24, y: 18, scale: 0.78 },
+  { sprite: 'prop-tree', x: 8, y: 20, scale: 0.88 },
+  { sprite: 'prop-tree', x: 32, y: 20, scale: 0.88 },
+  { sprite: 'prop-bush', x: 18, y: 7, scale: 0.8 },
+  { sprite: 'prop-bush', x: 22, y: 7, scale: 0.8 },
+  { sprite: 'prop-flower', x: 15, y: 5, scale: 0.78 },
+  { sprite: 'prop-flower', x: 25, y: 5, scale: 0.78 },
+  { sprite: 'prop-lamp', x: 17, y: 5, scale: 0.82 },
+  { sprite: 'prop-lamp', x: 23, y: 5, scale: 0.82 },
 ];
 
 export const DECOR = [...decorBase];

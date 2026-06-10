@@ -9,6 +9,15 @@ import { MissionDecisionHolo } from './mission-decision-holo';
 import { MissionNavigation } from './mission-navigation';
 import { MissionZoneMarkers } from './mission-zone-markers';
 import { registerPlayerAnimations, TilemapPlayer } from './tilemap/tilemap-player';
+import {
+  MAP_FONT_PLACE,
+  MAP_LABEL_PAD_X,
+  MAP_LABEL_PAD_Y,
+  MAP_TEXT_RESOLUTION,
+  formatEnterPrompt,
+  mapBuildingSignStyle,
+  wrapMapLabel,
+} from './map-typography';
 
 const WALK_SPEED = 150;
 const RUN_SPEED = 250;
@@ -24,7 +33,9 @@ export class MissionWorldScene extends Phaser.Scene {
   private buildingWalls!: Phaser.Physics.Arcade.StaticGroup;
   private decorWalls!: Phaser.Physics.Arcade.StaticGroup;
   private promptGlow: Phaser.GameObjects.Ellipse | null = null;
-  private promptLabel: Phaser.GameObjects.Text | null = null;
+  private promptPanel: Phaser.GameObjects.Container | null = null;
+  private promptPanelBg: Phaser.GameObjects.Graphics | null = null;
+  private promptPanelText: Phaser.GameObjects.Text | null = null;
   private nearZoneIndex = -1;
   private nearInteract = false;
   private interactCooldown = 0;
@@ -312,38 +323,82 @@ export class MissionWorldScene extends Phaser.Scene {
   private createBuildingSign(
     x: number,
     y: number,
-    label: string,
+    labelText: string,
     depth: number,
     scale: number,
     highlight = false,
   ): void {
-    const fontSize = Math.max(12, Math.round(14 * scale));
-    const padX = 12;
-    const textW = Math.max(label.length * (fontSize * 0.55) + padX * 2, 64);
-    const textH = fontSize + 10;
+    const display = wrapMapLabel(labelText, 16);
+    const lines = display.split('\n').length;
+    const style = mapBuildingSignStyle(scale, highlight);
+    const padX = 16;
+    const padY = 10;
+    const lineH = style.fontSize + 4;
+    const textW = Math.min(Math.max(labelText.length * (style.fontSize * 0.48) + padX * 2, 84), 240);
+    const textH = lineH * lines + padY * 2 - 4;
     const accent = highlight ? 0xf4c542 : 0x4fc3ff;
+    const accentSoft = highlight ? 0xffe082 : 0x7dd3fc;
 
-    const g = this.add.graphics();
-    g.fillStyle(0x0c1220, 0.92);
-    g.fillRoundedRect(x - textW / 2, y - textH / 2, textW, textH, 5);
-    g.lineStyle(1.5, accent, highlight ? 0.85 : 0.55);
-    g.strokeRoundedRect(x - textW / 2, y - textH / 2, textW, textH, 5);
-    g.fillStyle(accent, 0.15);
-    g.fillRoundedRect(x - textW / 2 + 1, y - textH / 2 + 1, textW - 2, 3, 4);
-    g.setDepth(depth);
+    const container = this.add.container(x, y).setDepth(depth);
 
-    this.add
-      .text(x, y, label, {
-        fontFamily: 'Rajdhani, "Segoe UI", Arial, sans-serif',
-        fontSize: `${fontSize}px`,
+    const glow = this.add.graphics();
+    glow.fillStyle(accent, highlight ? 0.2 : 0.12);
+    glow.fillRoundedRect(-textW / 2 - 5, -textH / 2 - 5, textW + 10, textH + 10, 9);
+    glow.setBlendMode(Phaser.BlendModes.ADD);
+
+    const drop = this.add.graphics();
+    drop.fillStyle(0x000000, 0.42);
+    drop.fillRoundedRect(-textW / 2 + 3, -textH / 2 + 4, textW, textH, 7);
+
+    const panel = this.add.graphics();
+    panel.fillStyle(0x080e1a, 0.96);
+    panel.fillRoundedRect(-textW / 2, -textH / 2, textW, textH, 7);
+    panel.fillStyle(accent, 0.16);
+    panel.fillRoundedRect(-textW / 2 + 2, -textH / 2 + 2, textW - 4, 5, 5);
+    panel.lineStyle(2.5, accent, highlight ? 0.95 : 0.78);
+    panel.strokeRoundedRect(-textW / 2, -textH / 2, textW, textH, 7);
+    panel.lineStyle(1, accentSoft, 0.5);
+    panel.strokeRoundedRect(-textW / 2 + 4, -textH / 2 + 4, textW - 8, textH - 8, 5);
+
+    const pin = this.add.graphics();
+    pin.fillStyle(accent, 0.9);
+    pin.fillTriangle(-4, textH / 2, 4, textH / 2, 0, textH / 2 + 8);
+    pin.fillStyle(0xffffff, 0.2);
+    pin.fillTriangle(-2, textH / 2 - 1, 2, textH / 2 - 1, 0, textH / 2 + 4);
+
+    const text = this.add
+      .text(0, 0, display, {
+        fontFamily: style.fontFamily,
+        fontSize: `${style.fontSize}px`,
         fontStyle: 'bold',
-        color: '#f8fafc',
+        color: style.color,
         align: 'center',
-        stroke: '#0a0e18',
-        strokeThickness: 2,
+        stroke: style.stroke,
+        strokeThickness: style.strokeThickness,
+        lineSpacing: 2,
+        shadow: {
+          offsetX: 0,
+          offsetY: 2,
+          color: '#000000',
+          blur: 6,
+          fill: true,
+        },
       })
       .setOrigin(0.5, 0.5)
-      .setDepth(depth + 1);
+      .setResolution(MAP_TEXT_RESOLUTION);
+
+    container.add([drop, glow, panel, pin, text]);
+
+    if (highlight) {
+      this.tweens.add({
+        targets: glow,
+        alpha: { from: 0.55, to: 1 },
+        duration: 1100,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+    }
   }
 
   private placeBuilding(b: CampusBuildingDef): void {
@@ -568,7 +623,7 @@ export class MissionWorldScene extends Phaser.Scene {
 
     if (!show || !this.bridge.world) {
       this.promptGlow?.setVisible(false);
-      this.promptLabel?.setVisible(false);
+      this.promptPanel?.setVisible(false);
       return;
     }
 
@@ -576,29 +631,52 @@ export class MissionWorldScene extends Phaser.Scene {
     if (!zone) return;
 
     const door = this.zoneDoor(zone);
-    const text = `Entrar · ${zone.label}`;
+    const display = formatEnterPrompt(zone.label);
+    const accent = Phaser.Display.Color.HexStringToColor(zone.accent).color;
 
-    if (!this.promptGlow) {
+    if (!this.promptPanel) {
       this.promptGlow = this.add.ellipse(door.x, door.y + 8, 48, 16, 0x4fc3ff, 0.25);
-      this.promptLabel = this.add
-        .text(door.x, door.y - 22, text, {
-          fontFamily: 'Rajdhani, sans-serif',
-          fontSize: '12px',
-          color: '#e8f4ff',
-          backgroundColor: '#0a1420cc',
-          padding: { x: 8, y: 4 },
+      this.promptPanelBg = this.add.graphics();
+      this.promptPanelText = this.add
+        .text(0, 0, display, {
+          fontFamily: MAP_FONT_PLACE,
+          fontSize: '14px',
+          fontStyle: 'bold',
+          color: '#fff8e8',
+          stroke: '#040810',
+          strokeThickness: 3,
+          align: 'center',
+          lineSpacing: 4,
         })
-        .setOrigin(0.5);
+        .setOrigin(0.5, 0.5)
+        .setResolution(MAP_TEXT_RESOLUTION);
+      this.promptPanel = this.add.container(door.x, door.y - 30, [
+        this.promptPanelBg,
+        this.promptPanelText,
+      ]);
     }
 
-    this.promptGlow.setPosition(door.x, door.y + 8);
-    this.promptGlow.setDepth(9000 + door.y);
-    this.promptLabel?.setPosition(door.x, door.y - 22);
-    this.promptLabel?.setText(text);
-    this.promptLabel?.setDepth(9001 + door.y);
-    this.promptGlow.setVisible(true);
-    this.promptLabel?.setVisible(true);
-    this.promptGlow.setFillStyle(Phaser.Display.Color.HexStringToColor(zone.accent).color, 0.3);
+    this.promptPanelText!.setText(display);
+    this.promptPanelText!.setAlign('center');
+
+    const w = Math.max(this.promptPanelText!.width + MAP_LABEL_PAD_X * 2, 120);
+    const h = Math.max(this.promptPanelText!.height + MAP_LABEL_PAD_Y * 2, 40);
+
+    this.promptPanelBg!.clear();
+    this.promptPanelBg!.fillStyle(0x080e1a, 0.96);
+    this.promptPanelBg!.fillRoundedRect(-w / 2, -h / 2, w, h, 8);
+    this.promptPanelBg!.lineStyle(2, accent, 0.85);
+    this.promptPanelBg!.strokeRoundedRect(-w / 2, -h / 2, w, h, 8);
+    this.promptPanelBg!.fillStyle(accent, 0.14);
+    this.promptPanelBg!.fillRoundedRect(-w / 2 + 2, -h / 2 + 2, w - 4, 4, 4);
+
+    this.promptGlow!.setPosition(door.x, door.y + 8);
+    this.promptGlow!.setDepth(9000 + door.y);
+    this.promptPanel!.setPosition(door.x, door.y - 32);
+    this.promptPanel!.setDepth(9001 + door.y);
+    this.promptGlow!.setVisible(true);
+    this.promptPanel!.setVisible(true);
+    this.promptGlow!.setFillStyle(accent, 0.3);
   }
 
   private applyPixelArtFilters(): void {
