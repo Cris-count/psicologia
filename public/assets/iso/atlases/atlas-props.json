@@ -1,0 +1,495 @@
+{
+  "frames": {
+    "iso-prop-ambulance": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 120,
+        "h": 68
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 120,
+        "h": 68
+      },
+      "sourceSize": {
+        "w": 120,
+        "h": 68
+      }
+    },
+    "iso-prop-sign-hospital": {
+      "frame": {
+        "x": 220,
+        "y": 0,
+        "w": 44,
+        "h": 72
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 44,
+        "h": 72
+      },
+      "sourceSize": {
+        "w": 44,
+        "h": 72
+      }
+    },
+    "iso-prop-emergency-sign": {
+      "frame": {
+        "x": 440,
+        "y": 0,
+        "w": 48,
+        "h": 72
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 48,
+        "h": 72
+      },
+      "sourceSize": {
+        "w": 48,
+        "h": 72
+      }
+    },
+    "iso-prop-police-car": {
+      "frame": {
+        "x": 660,
+        "y": 0,
+        "w": 120,
+        "h": 68
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 120,
+        "h": 68
+      },
+      "sourceSize": {
+        "w": 120,
+        "h": 68
+      }
+    },
+    "iso-prop-sign-police": {
+      "frame": {
+        "x": 880,
+        "y": 0,
+        "w": 44,
+        "h": 72
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 44,
+        "h": 72
+      },
+      "sourceSize": {
+        "w": 44,
+        "h": 72
+      }
+    },
+    "iso-prop-psi-banner": {
+      "frame": {
+        "x": 0,
+        "y": 180,
+        "w": 52,
+        "h": 88
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 52,
+        "h": 88
+      },
+      "sourceSize": {
+        "w": 52,
+        "h": 88
+      }
+    },
+    "iso-prop-plant": {
+      "frame": {
+        "x": 220,
+        "y": 180,
+        "w": 48,
+        "h": 64
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 48,
+        "h": 64
+      },
+      "sourceSize": {
+        "w": 48,
+        "h": 64
+      }
+    },
+    "iso-prop-statue": {
+      "frame": {
+        "x": 440,
+        "y": 180,
+        "w": 72,
+        "h": 108
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 72,
+        "h": 108
+      },
+      "sourceSize": {
+        "w": 72,
+        "h": 108
+      }
+    },
+    "iso-prop-books": {
+      "frame": {
+        "x": 660,
+        "y": 180,
+        "w": 52,
+        "h": 44
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 52,
+        "h": 44
+      },
+      "sourceSize": {
+        "w": 52,
+        "h": 44
+      }
+    },
+    "iso-prop-flag-pole": {
+      "frame": {
+        "x": 880,
+        "y": 180,
+        "w": 48,
+        "h": 100
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 48,
+        "h": 100
+      },
+      "sourceSize": {
+        "w": 48,
+        "h": 100
+      }
+    },
+    "iso-prop-bench": {
+      "frame": {
+        "x": 0,
+        "y": 360,
+        "w": 96,
+        "h": 56
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 96,
+        "h": 56
+      },
+      "sourceSize": {
+        "w": 96,
+        "h": 56
+      }
+    },
+    "iso-prop-signpost": {
+      "frame": {
+        "x": 220,
+        "y": 360,
+        "w": 52,
+        "h": 80
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 52,
+        "h": 80
+      },
+      "sourceSize": {
+        "w": 52,
+        "h": 80
+      }
+    },
+    "iso-prop-fountain": {
+      "frame": {
+        "x": 440,
+        "y": 360,
+        "w": 140,
+        "h": 160
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 140,
+        "h": 160
+      },
+      "sourceSize": {
+        "w": 140,
+        "h": 160
+      }
+    },
+    "iso-prop-map-board": {
+      "frame": {
+        "x": 660,
+        "y": 360,
+        "w": 80,
+        "h": 96
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 80,
+        "h": 96
+      },
+      "sourceSize": {
+        "w": 80,
+        "h": 96
+      }
+    },
+    "iso-prop-entrance-gate": {
+      "frame": {
+        "x": 880,
+        "y": 360,
+        "w": 220,
+        "h": 132
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 220,
+        "h": 132
+      },
+      "sourceSize": {
+        "w": 220,
+        "h": 132
+      }
+    },
+    "iso-prop-flowers-yellow": {
+      "frame": {
+        "x": 0,
+        "y": 540,
+        "w": 64,
+        "h": 48
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 48
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 48
+      }
+    },
+    "iso-prop-tree-oak": {
+      "frame": {
+        "x": 220,
+        "y": 540,
+        "w": 112,
+        "h": 148
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 112,
+        "h": 148
+      },
+      "sourceSize": {
+        "w": 112,
+        "h": 148
+      }
+    },
+    "iso-prop-flowers-purple": {
+      "frame": {
+        "x": 440,
+        "y": 540,
+        "w": 64,
+        "h": 48
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 48
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 48
+      }
+    },
+    "iso-prop-flowers": {
+      "frame": {
+        "x": 660,
+        "y": 540,
+        "w": 64,
+        "h": 48
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 48
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 48
+      }
+    },
+    "iso-prop-hedge": {
+      "frame": {
+        "x": 880,
+        "y": 540,
+        "w": 80,
+        "h": 44
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 80,
+        "h": 44
+      },
+      "sourceSize": {
+        "w": 80,
+        "h": 44
+      }
+    },
+    "iso-prop-bush-round": {
+      "frame": {
+        "x": 0,
+        "y": 720,
+        "w": 64,
+        "h": 52
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 52
+      },
+      "sourceSize": {
+        "w": 64,
+        "h": 52
+      }
+    },
+    "iso-prop-bush": {
+      "frame": {
+        "x": 220,
+        "y": 720,
+        "w": 72,
+        "h": 56
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 72,
+        "h": 56
+      },
+      "sourceSize": {
+        "w": 72,
+        "h": 56
+      }
+    },
+    "iso-prop-lamp": {
+      "frame": {
+        "x": 440,
+        "y": 720,
+        "w": 56,
+        "h": 108
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 56,
+        "h": 108
+      },
+      "sourceSize": {
+        "w": 56,
+        "h": 108
+      }
+    },
+    "iso-prop-tree-oak-lg": {
+      "frame": {
+        "x": 660,
+        "y": 720,
+        "w": 140,
+        "h": 180
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 140,
+        "h": 180
+      },
+      "sourceSize": {
+        "w": 140,
+        "h": 180
+      }
+    }
+  },
+  "meta": {
+    "app": "MIND-SPHERE",
+    "version": "1.0",
+    "image": "atlas-props.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 1100,
+      "h": 900
+    },
+    "scale": "1"
+  }
+}

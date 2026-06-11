@@ -2,16 +2,23 @@ import { GroupTask, Question, Scenario, Situation } from '../../../models/academ
 import { AcademyDataService } from '../../../services/academy-data.service';
 import { MissionBlueprint, MissionZone, ZONE_THEME_ORDER, ZoneTheme } from './mission.types';
 
-const MAP_LAYOUT: Array<{ x: number; y: number }> = [
-  { x: 12, y: 72 },
-  { x: 32, y: 48 },
-  { x: 52, y: 62 },
-  { x: 72, y: 38 },
-  { x: 88, y: 55 },
-];
+/** Mapeo escenario → slot de edificio en CAMPUS_META (hospital=0, comisaría=1) */
+const SCENARIO_BUILDING_SLOT: Record<string, number> = {
+  'sce-hospital': 0,
+  'sce-comisaria': 1,
+};
 
-function themeForIndex(index: number): ZoneTheme {
+function themeForScenario(scenario: Scenario, index: number): ZoneTheme {
+  if (scenario.title.toLowerCase().includes('hospital')) return 'crisis-core';
+  if (scenario.title.toLowerCase().includes('comisar')) return 'ethics-vault';
   return ZONE_THEME_ORDER[index % ZONE_THEME_ORDER.length];
+}
+
+function buildingSlotFor(scenario: Scenario, index: number): number {
+  if (scenario.id in SCENARIO_BUILDING_SLOT) return SCENARIO_BUILDING_SLOT[scenario.id];
+  if (scenario.title.toLowerCase().includes('hospital')) return 0;
+  if (scenario.title.toLowerCase().includes('comisar')) return 1;
+  return index;
 }
 
 export function buildMissionBlueprint(
@@ -23,11 +30,11 @@ export function buildMissionBlueprint(
 
   const zones: MissionZone[] = scenarios.map((scenario, index) => ({
     id: scenario.id,
-    index,
+    index: buildingSlotFor(scenario, index),
     scenario,
-    theme: themeForIndex(index),
-    mapX: MAP_LAYOUT[index]?.x ?? 50,
-    mapY: MAP_LAYOUT[index]?.y ?? 50,
+    theme: themeForScenario(scenario, index),
+    mapX: 0,
+    mapY: 0,
     questions: data.questionsForTask(task, scenario.id),
   }));
 
@@ -76,8 +83,15 @@ export function isZoneUnlocked(
   zoneIndex: number,
   answeredIds: Set<string>,
 ): boolean {
+  const zone = zones.find((z) => z.index === zoneIndex);
+  if (!zone) return false;
   if (zoneIndex === 0) return true;
-  const prev = zones[zoneIndex - 1];
+  const prevZones = zones.filter((z) => z.index < zoneIndex).sort((a, b) => b.index - a.index);
+  const prev = prevZones[0];
   if (!prev) return true;
   return zoneProgress(prev, answeredIds).complete;
+}
+
+export function zoneLabel(zone: MissionZone): string {
+  return zone.scenario.title;
 }

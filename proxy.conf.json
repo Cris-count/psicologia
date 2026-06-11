@@ -1,4 +1,9 @@
 {
+  "/api/presence": {
+    "target": "http://localhost:4201",
+    "secure": false,
+    "changeOrigin": true
+  },
   "/api": {
     "target": "http://psicologo-api:3000",
     "secure": false,

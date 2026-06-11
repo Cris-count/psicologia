@@ -152,7 +152,27 @@
   object-fit: contain;
   object-position: center bottom;
   display: block;
+  opacity: 1;
+  image-rendering: auto;
   filter: drop-shadow(0 8px 24px rgba(79, 195, 255, 0.12)) drop-shadow(0 20px 40px rgba(0, 0, 0, 0.5));
+}
+
+:host-context(.guide-mission-active) .nexa-atmosphere,
+:host-context(.guide-mission-active) .nexa-holo-orb,
+:host-context(.guide-mission-active) .nexa-contact-shadow,
+:host-context(.guide-case-panel-active) .nexa-atmosphere,
+:host-context(.guide-case-panel-active) .nexa-holo-orb {
+  display: none !important;
+}
+
+:host-context(.guide-mission-active) .nexa-sprite {
+  opacity: 1;
+  filter: drop-shadow(0 10px 28px rgba(0, 0, 0, 0.65)) drop-shadow(0 0 12px rgba(79, 195, 255, 0.12));
+}
+
+:host-context(.guide-mission-active) .nexa-rig {
+  background: radial-gradient(ellipse at 50% 95%, rgba(12, 10, 24, 0.85), transparent 70%);
+  border-radius: 8px;
 }
 
 /* Capa cabello — sway sutil sobre zona superior */

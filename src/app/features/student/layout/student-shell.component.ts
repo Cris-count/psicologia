@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, OnInit, computed, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { GuideAssistantComponent } from '../../../shared/guide/components/guide-assistant/guide-assistant.component';
 import { GuideService } from '../../../shared/guide/services/guide.service';
@@ -47,9 +47,13 @@ import { GUIDE_SCROLL_ROOT } from '../../../shared/guide/components/guide-assist
     `,
   ],
 })
-export class StudentShellComponent {
-  private readonly guide = inject(GuideService);
+export class StudentShellComponent implements OnInit {
+  protected readonly guide = inject(GuideService);
 
   readonly showHintButton = computed(() => this.guide.context() === 'student_task');
   readonly showFab = computed(() => !this.guide.context().startsWith('onboarding'));
+
+  ngOnInit(): void {
+    console.log('Student shell initialized');
+  }
 }

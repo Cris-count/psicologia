@@ -9,6 +9,7 @@ import { GuideCharacterComponent } from '../shared/guide/components/guide-charac
 import { GuideService } from '../shared/guide/services/guide.service';
 import { StudentProfileService } from '../shared/guide/services/student-profile.service';
 import { TeacherProfileService } from '../shared/guide/services/teacher-profile.service';
+import { PresenceService } from '../services/presence.service';
 import { GameLoaderService } from '../shared/services/game-loader.service';
 import { GameSfxService } from '../shared/services/game-sfx.service';
 import { ThreeBackgroundComponent } from '../shared/ui/three-background/three-background.component';
@@ -146,8 +147,18 @@ import { ThreeBackgroundComponent } from '../shared/ui/three-background/three-ba
       </section>
 
       <footer class="lobby-footer">
-        <span>System Status: Optimal</span>
-        <span>2026 NEURAL LABS INC.</span>
+        <aside class="lobby-active-users" aria-label="Jugadores activos en tiempo real">
+          <div class="active-users-card" [class.is-live]="presence.connected()">
+            <span class="material-symbols-outlined" aria-hidden="true">groups</span>
+            <div class="active-users-data">
+              <strong>{{ presence.activeCount() }}</strong>
+              <small>Jugadores activos</small>
+            </div>
+            <span class="live-indicator" aria-hidden="true"></span>
+          </div>
+        </aside>
+        <span class="footer-status">System Status: Optimal</span>
+        <span class="footer-copy">2026 NEURAL LABS INC.</span>
       </footer>
     </main>
   `,
@@ -164,6 +175,7 @@ export class LoginPage implements OnInit {
   private readonly studentProfile = inject(StudentProfileService);
   private readonly teacherProfile = inject(TeacherProfileService);
   protected readonly sfx = inject(GameSfxService);
+  protected readonly presence = inject(PresenceService);
 
   email = '';
   password = '';

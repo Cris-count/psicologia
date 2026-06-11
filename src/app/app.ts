@@ -3,6 +3,7 @@ import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
 import { AuthService } from './services/auth.service';
 import { AiAssistantComponent } from './shared/ui/ai-assistant/ai-assistant.component';
+import { PresenceService } from './services/presence.service';
 import { GameLoaderComponent } from './shared/ui/game-loader/game-loader.component';
 
 @Component({
@@ -14,14 +15,17 @@ import { GameLoaderComponent } from './shared/ui/game-loader/game-loader.compone
 export class App implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
+  private readonly presence = inject(PresenceService);
   private navSub: Subscription | null = null;
   transitioning = false;
 
   ngOnInit(): void {
+    this.presence.start(this.router.url);
     this.navSub = this.router.events
       .pipe(filter((event) => event instanceof NavigationEnd))
       .subscribe(() => {
         this.transitioning = false;
+        this.presence.setPath(this.router.url);
         this.guardProtectedRoute(this.router.url);
       });
   }

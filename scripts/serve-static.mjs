@@ -2,6 +2,7 @@ import { createReadStream, existsSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { handlePresenceRequest } from './presence-api.mjs';
 
 const root = join(fileURLToPath(new URL('..', import.meta.url)), 'dist', 'Psicologo', 'browser');
 const port = Number(process.env.PORT ?? 4200);
@@ -36,6 +37,18 @@ function resolveFile(urlPath) {
 }
 
 createServer((req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
+  if (handlePresenceRequest(req, res)) return;
+
   const filePath = resolveFile(req.url ?? '/');
   if (!existsSync(filePath)) {
     res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });

@@ -34,8 +34,12 @@ import { normalizeAppearance } from '../shared/guide/data/appearance.catalog';
 import { migrateLegacyLook, normalizeAvatarLook } from '../shared/guide/data/avatar-studio.catalog';
 import type { AvatarLook } from '../shared/guide/data/avatar-look.types';
 
-const STORE_KEY = 'academic-case-simulator-store-v3';
+const STORE_KEY = 'academic-case-simulator-store-v5';
 const STORE_API_URL = '/api/store';
+
+/** Credenciales demo: reinicio del simulador estudiante. */
+export const DEMO_STUDENT_ID = 'usr-student-demo';
+export const DEMO_TASK_ID = 'tsk-demo';
 
 @Injectable({ providedIn: 'root' })
 export class AcademyDataService {
@@ -228,6 +232,7 @@ export class AcademyDataService {
       status: 'DRAFT',
       createdById: teacherId,
       resources: draft.resources?.trim() ?? '',
+      mapEnvironment: draft.mapEnvironment,
       createdAt: now,
       updatedAt: now,
     };
@@ -286,6 +291,7 @@ export class AcademyDataService {
               title: draft.title?.trim() ?? s.title,
               context: draft.context?.trim() ?? s.context,
               instructions: draft.instructions?.trim() ?? s.instructions,
+              interactableKind: draft.interactableKind ?? s.interactableKind,
             }
           : s,
       ),
@@ -467,7 +473,13 @@ export class AcademyDataService {
     });
   }
 
-  createScenario(situationId: string, title: string, context: string, instructions: string): void {
+  createScenario(
+    situationId: string,
+    title: string,
+    context: string,
+    instructions: string,
+    interactableKind?: Scenario['interactableKind'],
+  ): void {
     const orderIndex = this.scenariosForSituation(situationId).length + 1;
     const scenario: Scenario = {
       id: this.id('sce'),
@@ -476,6 +488,7 @@ export class AcademyDataService {
       context: context.trim(),
       instructions: instructions.trim(),
       orderIndex,
+      interactableKind,
       createdAt: new Date().toISOString(),
     };
     this.commit({ ...this.store(), scenarios: [...this.store().scenarios, scenario] });
@@ -703,6 +716,25 @@ export class AcademyDataService {
 
   answerForQuestion(studentId: string, questionId: string): StudentAnswer | undefined {
     return this.store().studentAnswers.find((answer) => answer.studentId === studentId && answer.questionId === questionId);
+  }
+
+  /** Borra respuestas y progreso de una tarea para volver a jugar el simulador desde cero. */
+  resetStudentTaskProgress(studentId: string, taskId: string): void {
+    const task = this.taskById(taskId);
+    if (!task) return;
+    const questionIds = new Set(task.questionIds);
+    const studentAnswers = this.store().studentAnswers.filter(
+      (a) => !(a.studentId === studentId && questionIds.has(a.questionId)),
+    );
+    const studentProgress = this.store().studentProgress.filter(
+      (p) => !(p.studentId === studentId && p.taskId === taskId),
+    );
+    this.commit({ ...this.store(), studentAnswers, studentProgress });
+  }
+
+  /** Reinicia la misión demo del estudiante (Caso 1 · campus). */
+  resetDemoStudentProgress(): void {
+    this.resetStudentTaskProgress(DEMO_STUDENT_ID, DEMO_TASK_ID);
   }
 
   progressFor(studentId: string, taskId: string): StudentProgress {
@@ -940,36 +972,38 @@ export class AcademyDataService {
     };
     const situation: Situation = {
       id: 'sit-demo',
-      title: 'Caso situacional: violencia domestica y tentativa de feminicidio',
-      description: 'Simulacion pedagogica para analizar decisiones de atencion, proteccion y acompanamiento.',
+      title: 'Caso 1: Violencia familiar y tentativa de feminicidio',
+      description:
+        'Son las 11 de la noche en un barrio con altas condiciones de vulnerabilidad: pobreza, violencias urbanas, robos, expendio de drogas, presencia de grupos armados ilegales y riñas callejeras entre vecinos.',
       context:
-        'Prototipo academico. El caso se usa para entrenar lectura de contexto, priorizacion de riesgos y activacion de rutas, sin reemplazar herramientas clinicas, juridicas o institucionales reales.',
+        'Un hombre de aproximadamente 28 años entra a su domicilio, donde reside con su actual pareja de 22 años. Ella tiene una hija de 3 años. Ese mismo día hubo un altercado verbal con maltrato psicológico y chantaje emocional. En la noche, el hombre saca una navaja, hiere a la menor causándole la muerte inmediata, y luego hiere múltiples veces a la mujer, dejándola gravemente herida.',
       learningObjective:
-        'Reconocer acciones iniciales eticas, tecnicas y psicosociales ante una situacion de alta criticidad.',
+        'Aplicar primeros auxilios psicológicos, activar rutas interdisciplinarias y tomar decisiones éticas ante violencia de género y riesgo de feminicidio.',
       difficulty: 'INTERMEDIATE',
       category: 'CRISIS',
       status: 'PUBLISHED',
       createdById: superAdmin.id,
+      mapEnvironment: 'attention-routes',
       createdAt: now,
       updatedAt: now,
     };
     const hospital: Scenario = {
       id: 'sce-hospital',
       situationId: situation.id,
-      title: 'Atencion en Hospital',
+      title: 'Atención en Hospital (Urgencia Vital y Crisis)',
       context:
-        'La persona afectada llega al servicio de urgencias en crisis emocional y con riesgo vital. El equipo debe priorizar estabilizacion, contencion y activacion de rutas.',
-      instructions: 'Selecciona la respuesta tecnicamente mas adecuada para cada momento del flujo.',
+        'La sobreviviente está en shock hipovolémico y emocional. La familia (madre y hermanos) llega al hospital en estado de alteración, exigiendo ver a la niña, quien ha fallecido, pero ellos aún no lo saben con certeza.',
+      instructions: 'Responde las preguntas sobre intervención inmediata, marco normativo y protocolos clínicos.',
       orderIndex: 1,
       createdAt: now,
     };
     const comisaria: Scenario = {
       id: 'sce-comisaria',
       situationId: situation.id,
-      title: 'Comisaria de Familia',
+      title: 'Comisaría de Familia (Restablecimiento de Derechos)',
       context:
-        'Tras la atencion inicial, se requiere valorar riesgo, orientar medidas de proteccion y coordinar apoyos psicosociales.',
-      instructions: 'Responde desde un enfoque de derechos, seguridad y no revictimizacion.',
+        'Han pasado 15 días. La mujer ha sido dada de alta, pero tiene secuelas físicas y trauma complejo. Se debe definir la medida de protección y el apoyo psicológico a largo plazo.',
+      instructions: 'Responde desde un enfoque de derechos, seguridad y no revictimización.',
       orderIndex: 2,
       createdAt: now,
     };
@@ -977,25 +1011,73 @@ export class AcademyDataService {
       {
         id: 'que-hospital-1',
         scenarioId: hospital.id,
-        statement: 'Ante urgencia vital y crisis emocional, cual debe ser la primera prioridad del equipo?',
+        statement: '¿En qué centrar la intervención inmediata?',
         category: 'TECHNICAL',
         questionType: 'MULTIPLE_CHOICE',
         points: 10,
         orderIndex: 1,
         feedback:
-          'La prioridad inicial es preservar la vida, estabilizar y acompanar emocionalmente con comunicacion clara y respetuosa.',
+          'La prioridad es contención emocional, acompañamiento en el duelo inicial y estabilización de la crisis mediante Primeros Auxilios Psicológicos (PAP).',
+        createdAt: now,
+      },
+      {
+        id: 'que-hospital-2',
+        scenarioId: hospital.id,
+        statement: '¿Qué marco normativo y técnico debe seguir?',
+        category: 'TECHNICAL',
+        questionType: 'MULTIPLE_CHOICE',
+        points: 10,
+        orderIndex: 2,
+        feedback:
+          'La Resolución 459 de 2012 regula la atención en salud; la Ley 1257 de 2008 aborda la violencia contra la mujer.',
+        createdAt: now,
+      },
+      {
+        id: 'que-hospital-3',
+        scenarioId: hospital.id,
+        statement: '¿Qué se debe hacer y qué se debe evitar?',
+        category: 'PSYCHOSOCIAL',
+        questionType: 'MULTIPLE_CHOICE',
+        points: 15,
+        orderIndex: 3,
+        feedback:
+          'Se requiere PAP para la familia, escucha activa a la víctima, protocolo EPICEE/SPIKES para la noticia del fallecimiento, evaluación psicosocial y manejo interdisciplinar.',
         createdAt: now,
       },
       {
         id: 'que-comisaria-1',
         scenarioId: comisaria.id,
-        statement: 'Que accion evita revictimizacion durante la orientacion inicial?',
+        statement: '¿Cuál es la prioridad en la asesoría psicosocial?',
         category: 'PSYCHOSOCIAL',
         questionType: 'MULTIPLE_CHOICE',
         points: 10,
         orderIndex: 1,
         feedback:
-          'La escucha respetuosa, la explicacion de opciones y la reduccion de relatos repetidos ayudan a proteger a la persona.',
+          'La valoración del riesgo de feminicidio, medidas de protección y asesoría sobre derechos económicos y de justicia son prioritarias.',
+        createdAt: now,
+      },
+      {
+        id: 'que-comisaria-2',
+        scenarioId: comisaria.id,
+        statement: '¿Qué marco normativo y técnico debe seguir?',
+        category: 'TECHNICAL',
+        questionType: 'MULTIPLE_CHOICE',
+        points: 10,
+        orderIndex: 2,
+        feedback:
+          'Ley 2126 de 2021 (Comisarías de Familia), Ley 1098 de 2006 (Código de Infancia) y Ley 1257 de 2008 (violencia contra la mujer).',
+        createdAt: now,
+      },
+      {
+        id: 'que-comisaria-3',
+        scenarioId: comisaria.id,
+        statement: '¿Qué se debe hacer y qué se debe evitar?',
+        category: 'PSYCHOSOCIAL',
+        questionType: 'MULTIPLE_CHOICE',
+        points: 15,
+        orderIndex: 3,
+        feedback:
+          'Valoración psicológica de la víctima y personas dependientes, nivel de riesgo, valoración de feminicidio y activación de rutas de derivación.',
         createdAt: now,
       },
     ];
@@ -1003,30 +1085,135 @@ export class AcademyDataService {
       {
         id: 'opt-hospital-1-a',
         questionId: 'que-hospital-1',
-        text: 'Estabilizar clinicamente, contener emocionalmente y activar rutas pertinentes.',
-        isCorrect: true,
+        text: 'Notificar a la madre y la familia sobre la muerte de la niña de inmediato',
+        isCorrect: false,
         orderIndex: 1,
       },
       {
         id: 'opt-hospital-1-b',
         questionId: 'que-hospital-1',
-        text: 'Solicitar primero un relato detallado de todos los hechos antes de atender.',
+        text: 'Contención emocional a la familia, acompañamiento en el duelo inicial y estabilización de la crisis (PAP)',
+        isCorrect: true,
+        orderIndex: 2,
+      },
+      {
+        id: 'opt-hospital-1-c',
+        questionId: 'que-hospital-1',
+        text: 'Interrogar a la víctima herida para obtener detalles del agresor antes de que entre a cirugía',
+        isCorrect: false,
+        orderIndex: 3,
+      },
+      {
+        id: 'opt-hospital-2-a',
+        questionId: 'que-hospital-2',
+        text: 'Resolución 459 de 2012',
+        isCorrect: false,
+        orderIndex: 1,
+      },
+      {
+        id: 'opt-hospital-2-b',
+        questionId: 'que-hospital-2',
+        text: 'Resolución 459 de 2012 y Ley 1257 de 2008',
+        isCorrect: true,
+        orderIndex: 2,
+      },
+      {
+        id: 'opt-hospital-2-c',
+        questionId: 'que-hospital-2',
+        text: 'Resolución 459 de 2012 y Ley 1448 de 2011',
+        isCorrect: false,
+        orderIndex: 3,
+      },
+      {
+        id: 'opt-hospital-3-a',
+        questionId: 'que-hospital-3',
+        text: 'Escucha activa sin juicios, intervenir disonancia cognitiva, preguntar antecedentes y activar ruta clínica',
+        isCorrect: false,
+        orderIndex: 1,
+      },
+      {
+        id: 'opt-hospital-3-b',
+        questionId: 'que-hospital-3',
+        text: 'PAP para la familia, escucha activa a la víctima, protocolo EPICEE/SPIKES para noticia del fallecimiento',
         isCorrect: false,
         orderIndex: 2,
       },
       {
+        id: 'opt-hospital-3-c',
+        questionId: 'que-hospital-3',
+        text: 'PAP, escucha activa, EPICEE/SPIKES, preguntar antecedentes de la relación y manejo interdisciplinar',
+        isCorrect: false,
+        orderIndex: 3,
+      },
+      {
+        id: 'opt-hospital-3-d',
+        questionId: 'que-hospital-3',
+        text: 'PAP, escucha activa, EPICEE/SPIKES, evaluación psicosocial familiar y manejo interdisciplinar',
+        isCorrect: true,
+        orderIndex: 4,
+      },
+      {
         id: 'opt-comisaria-1-a',
         questionId: 'que-comisaria-1',
-        text: 'Escuchar, explicar derechos y coordinar medidas sin exigir narraciones innecesarias.',
-        isCorrect: true,
+        text: 'Instar a la mujer para que escuche al agresor en pro de la unión familiar y el perdón',
+        isCorrect: false,
         orderIndex: 1,
       },
       {
         id: 'opt-comisaria-1-b',
         questionId: 'que-comisaria-1',
-        text: 'Pedir que repita el caso ante cada funcionario para confirmar consistencia.',
+        text: 'Valoración del riesgo de feminicidio, medidas de protección y asesoría sobre derechos',
+        isCorrect: true,
+        orderIndex: 2,
+      },
+      {
+        id: 'opt-comisaria-1-c',
+        questionId: 'que-comisaria-1',
+        text: 'Realizar psicoterapia para encontrar patrones de infancia en la elección de pareja',
+        isCorrect: false,
+        orderIndex: 3,
+      },
+      {
+        id: 'opt-comisaria-2-a',
+        questionId: 'que-comisaria-2',
+        text: 'Ley 2126 de 2021, Ley 1098 de 2006, Ley 1257 de 2008',
+        isCorrect: true,
+        orderIndex: 1,
+      },
+      {
+        id: 'opt-comisaria-2-b',
+        questionId: 'que-comisaria-2',
+        text: 'Ley 1098 de 2006, Ley 1257 de 2008',
         isCorrect: false,
         orderIndex: 2,
+      },
+      {
+        id: 'opt-comisaria-2-c',
+        questionId: 'que-comisaria-2',
+        text: 'Ley 1098 de 2006, Ley 1257 de 2008, Ley 1448 de 2011',
+        isCorrect: false,
+        orderIndex: 3,
+      },
+      {
+        id: 'opt-comisaria-3-a',
+        questionId: 'que-comisaria-3',
+        text: 'Escucha activa, detectar ciclos de violencia, valoración de feminicidio y ruta clínica',
+        isCorrect: false,
+        orderIndex: 1,
+      },
+      {
+        id: 'opt-comisaria-3-b',
+        questionId: 'que-comisaria-3',
+        text: 'Valoración psicológica, escucha activa, detectar ciclos de violencia y rutas de derivación',
+        isCorrect: false,
+        orderIndex: 2,
+      },
+      {
+        id: 'opt-comisaria-3-c',
+        questionId: 'que-comisaria-3',
+        text: 'Valoración psicológica, nivel de riesgo, valoración de feminicidio y rutas de derivación',
+        isCorrect: true,
+        orderIndex: 3,
       },
     ];
     return {
@@ -1065,7 +1252,14 @@ export class AcademyDataService {
           groupId: group.id,
           situationId: situation.id,
           scenarioIds: [hospital.id, comisaria.id],
-          questionIds: ['que-hospital-1', 'que-comisaria-1'],
+          questionIds: [
+            'que-hospital-1',
+            'que-hospital-2',
+            'que-hospital-3',
+            'que-comisaria-1',
+            'que-comisaria-2',
+            'que-comisaria-3',
+          ],
           assignedAt: now,
         },
       ],

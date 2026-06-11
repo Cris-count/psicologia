@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { User, UserRole } from '../models/academy.models';
 import { GameLoaderService } from '../shared/services/game-loader.service';
 import { AcademyDataService } from './academy-data.service';
+import { PresenceService } from './presence.service';
 
 const SESSION_KEY = 'academic-case-simulator-session-v2';
 
@@ -13,6 +14,7 @@ export class AuthService {
   private readonly data = inject(AcademyDataService);
   private readonly router = inject(Router);
   private readonly loader = inject(GameLoaderService);
+  private readonly presence = inject(PresenceService);
   private readonly userState = signal<User | null>(null);
   private readonly initializedState = signal(false);
   readonly currentUser = this.userState.asReadonly();
@@ -23,7 +25,11 @@ export class AuthService {
   constructor() {
     this.userState.set(this.restoreSession());
     this.ready = this.data.ready.finally(() => {
-      this.userState.set(this.restoreSession());
+      const restored = this.restoreSession();
+      this.userState.set(restored);
+      if (restored && this.isBrowser()) {
+        this.presence.setUser(restored.id);
+      }
       this.initializedState.set(true);
     });
   }
@@ -36,6 +42,7 @@ export class AuthService {
     this.userState.set(user);
     if (this.isBrowser()) {
       localStorage.setItem(SESSION_KEY, user.id);
+      this.presence.setUser(user.id);
     }
   }
 
@@ -96,8 +103,9 @@ export class AuthService {
       return;
     }
 
+    this.presence.leave();
     localStorage.removeItem(SESSION_KEY);
-    sessionStorage.clear();
+    sessionStorage.removeItem('mind-sphere-presence-session');
   }
 
   private restoreSession(): User | null {

@@ -1,0 +1,15 @@
+{
+  "columns": 15,
+  "image": "campus-premium.png",
+  "imageheight": 64,
+  "imagewidth": 1920,
+  "margin": 0,
+  "name": "campus-premium",
+  "spacing": 0,
+  "tilecount": 15,
+  "tiledversion": "1.10.2",
+  "tileheight": 64,
+  "tilewidth": 128,
+  "type": "tileset",
+  "version": "1.10"
+}

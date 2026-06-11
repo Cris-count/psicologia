@@ -1,0 +1,30 @@
+{
+  "frameWidth": 112,
+  "frameHeight": 144,
+  "cols": 7,
+  "rows": 4,
+  "dirs": [
+    "down",
+    "up",
+    "left",
+    "right"
+  ],
+  "framesPerDir": 7,
+  "idle": [
+    0,
+    1,
+    2
+  ],
+  "walk": [
+    3,
+    4,
+    5
+  ],
+  "run": [
+    3,
+    4,
+    5
+  ],
+  "interact": 6,
+  "source": "edu-player-art HD 4-dir"
+}

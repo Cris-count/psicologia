@@ -1,11 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { ThreeBackgroundComponent } from '../../../shared/ui/three-background/three-background.component';
-import { GameAnimateDirective } from '../../../shared/directives/game-animate.directive';
 import { GameGroup, GroupTask } from '../../../models/academy.models';
-import { AcademyDataService } from '../../../services/academy-data.service';
+import { AcademyDataService, DEMO_STUDENT_ID } from '../../../services/academy-data.service';
 import { AuthService } from '../../../services/auth.service';
 import { GuideService } from '../../../shared/guide/services/guide.service';
 import { StudentProfileService } from '../../../shared/guide/services/student-profile.service';
@@ -23,7 +22,6 @@ import { GameProgressComponent } from '../../../shared/ui/game-progress/game-pro
     GameProgressComponent,
     GameHudComponent,
     GameLogoutButtonComponent,
-    GameAnimateDirective,
   ],
   template: `
     <app-three-background [intensity]="view === 'tasks' ? 'login' : 'ambient'" />
@@ -86,7 +84,14 @@ import { GameProgressComponent } from '../../../shared/ui/game-progress/game-pro
           </div>
 
           <section class="panel">
-            <h2>Misiones del grupo</h2>
+            <div class="tasks-panel-head">
+              <h2>Misiones del grupo</h2>
+              @if (isDemoStudent()) {
+                <button type="button" class="ghost-button reset-demo-btn" (click)="resetDemoSimulator()">
+                  Reiniciar simulador demo
+                </button>
+              }
+            </div>
             <div class="task-list">
               @for (task of tasks(); track task.id) {
                 <button class="task-row" type="button" (click)="openTask(task.id)">
@@ -106,6 +111,7 @@ import { GameProgressComponent } from '../../../shared/ui/game-progress/game-pro
           </section>
         </section>
       }
+
     </div>
   `,
   styles: [
@@ -175,12 +181,35 @@ import { GameProgressComponent } from '../../../shared/ui/game-progress/game-pro
         padding: 0.45rem 0.75rem;
         white-space: nowrap;
       }
+
+      .tasks-panel-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-bottom: 0.85rem;
+      }
+
+      .tasks-panel-head h2 {
+        margin: 0;
+      }
+
+      .reset-demo-btn {
+        font-size: 0.72rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--psy-gold);
+        border-color: rgba(244, 197, 66, 0.45);
+      }
     `,
   ],
 })
 export class StudentHomePage implements OnInit {
   view: 'groups' | 'tasks' = 'groups';
   selectedGroupId = '';
+
+  readonly missionSession = signal(0);
 
   constructor(
     public readonly data: AcademyDataService,
@@ -192,6 +221,7 @@ export class StudentHomePage implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    console.log('Student module loaded');
     this.auth.ensureAuthenticatedOrRedirect();
     const initialGroupId = this.route.snapshot.queryParamMap.get('groupId');
     if (initialGroupId && this.groups().some((group) => group.id === initialGroupId)) {
@@ -200,6 +230,7 @@ export class StudentHomePage implements OnInit {
     }
     this.guide.setVisible(true);
     this.syncGuideContext();
+    console.log('Student home ready · view:', this.view, '· groups:', this.groups().length);
   }
 
   pageTitle(): string {
@@ -241,7 +272,8 @@ export class StudentHomePage implements OnInit {
   openTask(taskId: string): void {
     void this.router.navigate(['/student/mission', this.selectedGroupId, taskId]);
     this.guide.setVisible(true);
-    this.guide.show('Mision clinica iniciada. Explora el mapa mental y toma decisiones en cada zona.', 'encourage');
+    this.guide.show('Mision clinica iniciada. Explora el campus y toma decisiones en cada zona.', 'encourage');
+    console.log('Student opening task', taskId);
   }
 
   showGroups(): void {
@@ -282,6 +314,15 @@ export class StudentHomePage implements OnInit {
     return this.tasksForGroup(groupId).filter((task) => !this.progress(task.id).completed).length;
   }
 
+  isDemoStudent(): boolean {
+    return this.student()?.id === DEMO_STUDENT_ID;
+  }
+
+  resetDemoSimulator(): void {
+    this.data.resetDemoStudentProgress();
+    this.missionSession.update((n) => n + 1);
+    this.guide.show('Simulador demo reiniciado. Abre la mision para jugar desde cero.', 'encourage');
+  }
   progressPercent(): number {
     const tasks = this.groups().flatMap((group) => this.tasksForGroup(group.id));
     if (!tasks.length) return 0;

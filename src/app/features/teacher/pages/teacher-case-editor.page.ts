@@ -3,6 +3,8 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   Difficulty,
+  InteractableKindKey,
+  MapEnvironmentKey,
   QuestionCategory,
   QuestionType,
   Situation,
@@ -57,6 +59,14 @@ import { AuthService } from '../../../services/auth.service';
               </select>
             </label>
           </div>
+          <label>Mapa del simulador (mundo 2D)
+            <select [(ngModel)]="mapEnvironment" name="mapEnv">
+              @for (env of mapEnvironments; track env.value) {
+                <option [value]="env.value">{{ env.label }}</option>
+              }
+            </select>
+          </label>
+          <p class="muted">Define el escenario visual donde el estudiante explorará el caso.</p>
           <div class="button-row">
             <button class="primary-button" type="submit">Guardar borrador</button>
             @if (situationId()) {
@@ -76,6 +86,13 @@ import { AuthService } from '../../../services/auth.service';
             <label>Contexto / Situación <textarea [(ngModel)]="scenarioContext" name="scContext"></textarea></label>
             <label>Diálogos / Interacciones <textarea [(ngModel)]="scenarioDialogues" name="scDialogues" placeholder="Opcional: diálogos del caso"></textarea></label>
             <label>Instrucciones <textarea [(ngModel)]="scenarioInstructions" name="scInstr"></textarea></label>
+            <label>Punto interactivo en el mapa
+              <select [(ngModel)]="scenarioInteractable" name="scInteract">
+                @for (kind of interactableKinds; track kind.value) {
+                  <option [value]="kind.value">{{ kind.label }}</option>
+                }
+              </select>
+            </label>
             <button class="primary-button" type="submit">Agregar escenario</button>
           </form>
         </article>
@@ -248,8 +265,10 @@ export class TeacherCaseEditorPage implements OnInit {
   resources = '';
   category: SituationCategory = 'CLINICAL';
   difficulty: Difficulty = 'INTERMEDIATE';
+  mapEnvironment: MapEnvironmentKey = 'attention-routes';
 
   scenarioTitle = '';
+  scenarioInteractable: InteractableKindKey = 'npc';
   scenarioContext = '';
   scenarioDialogues = '';
   scenarioInstructions = '';
@@ -269,6 +288,24 @@ export class TeacherCaseEditorPage implements OnInit {
     { id: 'info' as const, label: '1. Caso' },
     { id: 'scenarios' as const, label: '2. Escenarios' },
     { id: 'questions' as const, label: '3. Preguntas' },
+  ];
+
+  readonly mapEnvironments = [
+    { value: 'attention-routes' as MapEnvironmentKey, label: 'Red de atención (ciudad conectada)' },
+    { value: 'clinical-office' as MapEnvironmentKey, label: 'Consultorio psicológico' },
+    { value: 'university-campus' as MapEnvironmentKey, label: 'Universidad / Campus' },
+    { value: 'hospital' as MapEnvironmentKey, label: 'Hospital' },
+    { value: 'research-lab' as MapEnvironmentKey, label: 'Centro de investigación' },
+    { value: 'mind-campus' as MapEnvironmentKey, label: 'Campus MIND-SPHERE' },
+  ];
+
+  readonly interactableKinds = [
+    { value: 'npc' as InteractableKindKey, label: 'NPC / Personaje' },
+    { value: 'terminal' as InteractableKindKey, label: 'Computador / Terminal' },
+    { value: 'patient' as InteractableKindKey, label: 'Paciente virtual' },
+    { value: 'desk' as InteractableKindKey, label: 'Escritorio / Mesa' },
+    { value: 'portal' as InteractableKindKey, label: 'Portal / Puerta' },
+    { value: 'door' as InteractableKindKey, label: 'Puerta de acceso' },
   ];
 
   readonly categories = [
@@ -318,6 +355,7 @@ export class TeacherCaseEditorPage implements OnInit {
         resources: this.resources,
         category: this.category,
         difficulty: this.difficulty,
+        mapEnvironment: this.mapEnvironment,
       });
       this.message.set('Caso actualizado.');
       return;
@@ -331,6 +369,7 @@ export class TeacherCaseEditorPage implements OnInit {
       resources: this.resources,
       category: this.category,
       difficulty: this.difficulty,
+      mapEnvironment: this.mapEnvironment,
     });
 
     if (created) {
@@ -353,7 +392,7 @@ export class TeacherCaseEditorPage implements OnInit {
     const id = this.situationId();
     if (!id || !this.scenarioTitle.trim()) return;
     const ctx = [this.scenarioContext, this.scenarioDialogues].filter(Boolean).join('\n\n');
-    this.data.createScenario(id, this.scenarioTitle, ctx, this.scenarioInstructions);
+    this.data.createScenario(id, this.scenarioTitle, ctx, this.scenarioInstructions, this.scenarioInteractable);
     this.scenarioTitle = '';
     this.scenarioContext = '';
     this.scenarioDialogues = '';
@@ -415,6 +454,7 @@ export class TeacherCaseEditorPage implements OnInit {
     this.resources = situation.resources ?? '';
     this.category = situation.category;
     this.difficulty = situation.difficulty;
+    this.mapEnvironment = situation.mapEnvironment ?? 'attention-routes';
     const scs = this.scenarios();
     if (scs.length) this.questionScenarioId = scs[0].id;
   }

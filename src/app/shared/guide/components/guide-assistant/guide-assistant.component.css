@@ -214,25 +214,17 @@
 
   border-radius: var(--psy-radius);
 
-  background: linear-gradient(
+  background: linear-gradient(145deg, #13102a 0%, #1e1840 100%);
 
-    145deg,
-
-    rgba(19, 16, 42, 0.82),
-
-    rgba(34, 28, 66, 0.72)
-
-  );
-
-  border: 1px solid rgba(79, 195, 255, 0.32);
-
-  backdrop-filter: blur(14px);
+  border: 1px solid rgba(79, 195, 255, 0.45);
 
   box-shadow:
 
-    0 0 20px rgba(79, 195, 255, 0.1),
+    0 8px 28px rgba(0, 0, 0, 0.45),
 
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    0 0 20px rgba(79, 195, 255, 0.12),
+
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 
 }
 
@@ -376,9 +368,9 @@
 
   height: 12px;
 
-  background: rgba(24, 20, 48, 0.88);
+  background: #1e1840;
 
-  border-right: 1px solid rgba(79, 195, 255, 0.35);
+  border-right: 1px solid rgba(79, 195, 255, 0.45);
 
   border-bottom: 1px solid rgba(79, 195, 255, 0.35);
 
@@ -430,7 +422,7 @@
 
   border-radius: 50%;
 
-  background: rgba(19, 16, 42, 0.85);
+  background: #13102a;
 
   color: var(--psy-muted);
 
@@ -504,7 +496,7 @@
 
   border: 2px solid var(--psy-border-gold);
 
-  background: linear-gradient(135deg, rgba(107, 140, 255, 0.35), rgba(123, 92, 191, 0.4));
+  background: linear-gradient(135deg, #1a1630, #221c42);
 
   color: var(--psy-gold);
 
@@ -728,6 +720,111 @@
 :host.guide-presence-student .guide-fab {
   width: 46px;
   height: 46px;
+}
+
+:host.guide-mission-active {
+  z-index: 8;
+}
+
+/* Misión — Gary abajo-izquierda (fixed), lejos del panel derecho */
+:host.guide-mission-active .guide-npc-scene {
+  position: fixed;
+  left: clamp(0.75rem, 3vw, 1.5rem);
+  right: auto;
+  bottom: 4.5rem;
+  width: min(200px, 26vw);
+  height: min(240px, 34vh);
+  pointer-events: none;
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+:host.guide-mission-active .guide-npc-scene::before {
+  display: none;
+}
+
+:host.guide-mission-active .guide-npc-presence {
+  position: absolute;
+  left: 0;
+  right: auto;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  filter: none;
+  background: radial-gradient(ellipse at 50% 88%, rgba(12, 10, 24, 0.92) 0%, rgba(12, 10, 24, 0.55) 45%, transparent 72%);
+  border-radius: 12px;
+}
+
+:host.guide-mission-active .guide-npc-floor-glow {
+  display: none;
+}
+
+:host.guide-mission-active .guide-speech-bubble {
+  left: 0;
+  right: auto;
+  bottom: calc(100% - 12px);
+  max-width: min(300px, 38vw);
+  animation-name: bubble-enter-left;
+}
+
+:host.guide-mission-active .bubble-tail {
+  left: 28px;
+  right: auto;
+  bottom: -5px;
+  top: auto;
+  transform: rotate(45deg);
+  border-left: 1px solid rgba(244, 197, 66, 0.4);
+  border-bottom: 1px solid rgba(244, 197, 66, 0.35);
+  border-right: none;
+}
+
+:host.guide-mission-active .bubble-inner {
+  background: #12102a;
+  border-color: rgba(244, 197, 66, 0.45);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+  backdrop-filter: none;
+}
+
+:host.guide-mission-active .bubble-dismiss {
+  top: 6px;
+  right: 6px;
+  left: auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: #1a1630;
+  border-color: rgba(155, 143, 217, 0.35);
+}
+
+:host.guide-mission-active .bubble-dismiss--flat {
+  border-radius: 4px;
+}
+
+/* Panel de escenario abierto: Gary fuera de pantalla (pistas van al panel lateral) */
+:host.guide-mission-active.guide-case-panel-active .guide-npc-scene {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (max-width: 900px) {
+  :host.guide-mission-active .guide-npc-scene {
+    width: min(150px, 22vw);
+    height: min(200px, 28vh);
+  }
+}
+
+@media (max-width: 640px) {
+  :host.guide-mission-active .guide-npc-scene {
+    left: 0.5rem;
+    bottom: 42vh;
+    width: min(120px, 28vw);
+    height: min(160px, 22vh);
+  }
+
+  :host.guide-mission-active .guide-speech-bubble {
+    max-width: calc(100vw - 2rem);
+  }
 }
 
 @media (max-width: 640px) {
