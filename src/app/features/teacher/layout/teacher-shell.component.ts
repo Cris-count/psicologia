@@ -9,6 +9,7 @@ import { GameHudComponent } from '../../../shared/ui/game-hud/game-hud.component
 import { GameLogoutButtonComponent } from '../../../shared/ui/game-logout-button/game-logout-button.component';
 import { ThreeBackgroundComponent } from '../../../shared/ui/three-background/three-background.component';
 import { TEACHER_NAV_ITEMS } from '../data/teacher-nav.catalog';
+import type { GameGroup, GroupTask, StudentProgress } from '../../../models/academy.models';
 
 @Component({
   selector: 'app-teacher-shell',
@@ -75,6 +76,7 @@ import { TEACHER_NAV_ITEMS } from '../data/teacher-nav.catalog';
 export class TeacherShellComponent implements OnInit {
   protected readonly auth = inject(AuthService);
   protected readonly teacherProfile = inject(TeacherProfileService);
+  protected readonly data = inject(AcademyDataService);
   protected readonly appName = APP_NAME;
   protected readonly appLogo = APP_LOGO_PATH;
   protected readonly navItems = TEACHER_NAV_ITEMS;
@@ -93,11 +95,11 @@ export class TeacherShellComponent implements OnInit {
   readonly teacherXpPercent = computed(() => {
     const teacher = this.auth.currentUser();
     if (!teacher) return 0;
-    const groupIds = new Set(this.data.groupsByTeacher(teacher.id).map((group) => group.id));
-    const taskIds = new Set(this.data.store().groupTasks.filter((task) => groupIds.has(task.groupId)).map((task) => task.id));
-    const progressRows = this.data.store().studentProgress.filter((progress) => taskIds.has(progress.taskId));
+    const groupIds = new Set(this.data.groupsByTeacher(teacher.id).map((group: GameGroup) => group.id));
+    const taskIds = new Set(this.data.store().groupTasks.filter((task: GroupTask) => groupIds.has(task.groupId)).map((task: GroupTask) => task.id));
+    const progressRows = this.data.store().studentProgress.filter((progress: StudentProgress) => taskIds.has(progress.taskId));
     if (!progressRows.length) return 0;
-    return Math.round(progressRows.reduce((sum, progress) => sum + progress.progressPercentage, 0) / progressRows.length);
+    return Math.round(progressRows.reduce((sum: number, progress: StudentProgress) => sum + progress.progressPercentage, 0) / progressRows.length);
   });
 
   ngOnInit(): void {

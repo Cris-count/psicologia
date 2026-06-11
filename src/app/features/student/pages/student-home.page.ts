@@ -1,7 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, ActivatedRoute, RouterLink } from '@angular/router';
+import { ThreeBackgroundComponent } from '../../../shared/ui/three-background/three-background.component';
+import { GameAnimateDirective } from '../../../shared/directives/game-animate.directive';
 import { GameGroup, GroupTask } from '../../../models/academy.models';
 import { AcademyDataService } from '../../../services/academy-data.service';
 import { AuthService } from '../../../services/auth.service';
@@ -22,12 +24,11 @@ import { GameProgressComponent } from '../../../shared/ui/game-progress/game-pro
     GameHudComponent,
     GameLogoutButtonComponent,
     GameAnimateDirective,
-    ClinicalMissionComponent,
   ],
   template: `
-    <app-three-background [intensity]="view === 'task' ? 'login' : 'ambient'" />
-    <div class="student-shell student-with-guide" [class.mission-mode]="view === 'task'">
-      @if (view !== 'task') {
+    <app-three-background [intensity]="view === 'tasks' ? 'login' : 'ambient'" />
+    <div class="student-shell student-with-guide" [class.mission-mode]="view === 'tasks'">
+      @if (view !== 'tasks') {
         <app-game-hud
           [eyebrow]="'Estudiante · ' + pageTitle()"
           [title]="profile.characterName()"
