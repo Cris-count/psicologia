@@ -11,9 +11,8 @@ import { AdminPlatformService } from '../services/admin-platform.service';
     </header>
     <article class="admin-card">
       <p class="admin-badge critical">{{ platform.licenseSummary().expiringLabel }}</p>
-      <p style="color:var(--admin-muted);margin:1rem 0">Total emitidas: <strong>{{ platform.licenseSummary().totalIssued }}</strong></p>
-      <p style="color:var(--admin-muted)">Integración pendiente con backend de facturación / vales de acceso.</p>
-      <button class="admin-btn primary" type="button" style="margin-top:1rem">Gestionar vales de acceso</button>
+      <p style="color:var(--admin-muted);margin:1rem 0">Usuarios registrados: <strong>{{ platform.licenseSummary().totalIssued }}</strong></p>
+      <p style="color:var(--admin-muted)">Este panel usa el estado real de usuarios activos e inactivos del sistema.</p>
     </article>
   `,
 })

@@ -16,15 +16,22 @@ export class AuthService {
   private readonly loader = inject(GameLoaderService);
   private readonly presence = inject(PresenceService);
   private readonly userState = signal<User | null>(null);
+  private readonly initializedState = signal(false);
   readonly currentUser = this.userState.asReadonly();
+  readonly initialized = this.initializedState.asReadonly();
   readonly isAuthenticated = computed(() => Boolean(this.currentUser()));
+  readonly ready: Promise<void>;
 
   constructor() {
-    const restored = this.restoreSession();
-    this.userState.set(restored);
-    if (restored && this.isBrowser()) {
-      this.presence.setUser(restored.id);
-    }
+    this.userState.set(this.restoreSession());
+    this.ready = this.data.ready.finally(() => {
+      const restored = this.restoreSession();
+      this.userState.set(restored);
+      if (restored && this.isBrowser()) {
+        this.presence.setUser(restored.id);
+      }
+      this.initializedState.set(true);
+    });
   }
 
   authenticateCredentials(email: string, password: string): User | null {
@@ -55,6 +62,10 @@ export class AuthService {
   }
 
   ensureAuthenticatedOrRedirect(): boolean {
+    if (!this.initialized()) {
+      return true;
+    }
+
     if (this.isAuthenticated()) {
       return true;
     }

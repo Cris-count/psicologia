@@ -1,9 +1,17 @@
 import { isPlatformBrowser } from '@angular/common';
 import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
+import { DEFAULT_AVATAR_ID, normalizeAvatarId } from '../shared/guide/data/avatar.catalog';
+import {
+  DEFAULT_TEACHER_AVATAR_ID,
+  normalizeTeacherAvatarId,
+} from '../shared/guide/data/teacher-avatar.catalog';
 import {
   AcademyStore,
   AnswerOption,
+  AvatarAccessories,
+  AvatarAppearance,
   AvatarId,
+  TeacherAvatarId,
   Difficulty,
   GameGroup,
   GroupTask,
@@ -21,10 +29,15 @@ import {
   TaskDraft,
   User,
 } from '../models/academy.models';
+import { normalizeAccessories } from '../shared/guide/data/accessory.catalog';
+import { normalizeAppearance } from '../shared/guide/data/appearance.catalog';
+import { migrateLegacyLook, normalizeAvatarLook } from '../shared/guide/data/avatar-studio.catalog';
+import type { AvatarLook } from '../shared/guide/data/avatar-look.types';
 
 const STORE_KEY = 'academic-case-simulator-store-v5';
+const STORE_API_URL = '/api/store';
 
-/** Credenciales demo — reinicio del simulador estudiante */
+/** Credenciales demo: reinicio del simulador estudiante. */
 export const DEMO_STUDENT_ID = 'usr-student-demo';
 export const DEMO_TASK_ID = 'tsk-demo';
 
@@ -32,7 +45,14 @@ export const DEMO_TASK_ID = 'tsk-demo';
 export class AcademyDataService {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly state = signal<AcademyStore>(this.loadInitialStore());
+  private readonly readyState = signal(false);
   readonly store = this.state.asReadonly();
+  readonly storeReady = this.readyState.asReadonly();
+  readonly ready: Promise<void>;
+
+  constructor() {
+    this.ready = this.loadDockerStore().finally(() => this.readyState.set(true));
+  }
 
   get users(): User[] {
     return this.store().users;
@@ -124,6 +144,33 @@ export class AcademyDataService {
         profile.userId === userId ? { ...profile, canCreateCases } : profile,
       ),
     });
+  }
+
+  updateTeacherGameProfile(
+    userId: string,
+    patch: {
+      avatarId?: TeacherAvatarId;
+      characterName?: string;
+      avatarConfigured?: boolean;
+    },
+  ): boolean {
+    const profile = this.teacherProfileFor(userId);
+    if (!profile) return false;
+    if (patch.characterName !== undefined && patch.characterName.trim().length < 2) return false;
+    this.commit({
+      ...this.store(),
+      teacherProfiles: this.store().teacherProfiles.map((p) =>
+        p.userId === userId
+          ? {
+              ...p,
+              ...patch,
+              characterName:
+                patch.characterName !== undefined ? patch.characterName.trim() : p.characterName,
+            }
+          : p,
+      ),
+    });
+    return true;
   }
 
   isEmergencyLockoutActive(): boolean {
@@ -365,7 +412,7 @@ export class AcademyDataService {
           userId: user.id,
           code: code.trim() || `EST-${Date.now()}`,
           nickname: '',
-          avatarId: 'neural-01',
+          avatarId: DEFAULT_AVATAR_ID,
           onboardingCompleted: false,
           createdAt: now,
         },
@@ -463,7 +510,16 @@ export class AcademyDataService {
 
   updateStudentGameProfile(
     userId: string,
-    patch: { nickname?: string; avatarId?: AvatarId; onboardingCompleted?: boolean },
+    patch: {
+      nickname?: string;
+      characterName?: string;
+      avatarId?: AvatarId;
+      avatarLook?: AvatarLook;
+      rpmAvatarUrl?: string;
+      accessories?: AvatarAccessories;
+      appearance?: AvatarAppearance;
+      onboardingCompleted?: boolean;
+    },
   ): boolean {
     const profile = this.studentProfileFor(userId);
     if (!profile) return false;
@@ -768,7 +824,7 @@ export class AcademyDataService {
   private commit(store: AcademyStore): void {
     this.state.set(store);
     if (this.isBrowser()) {
-      localStorage.setItem(STORE_KEY, JSON.stringify(store));
+      void this.saveDockerStore(store);
     }
   }
 
@@ -780,11 +836,53 @@ export class AcademyDataService {
     if (!this.isBrowser()) {
       return this.seedStore();
     }
+
     const saved = localStorage.getItem(STORE_KEY);
     if (saved) {
       return this.normalizeStore(JSON.parse(saved) as AcademyStore);
     }
+
     return this.seedStore();
+  }
+
+  private async loadDockerStore(): Promise<void> {
+    if (!this.isBrowser()) {
+      return;
+    }
+
+    try {
+      const response = await fetch(STORE_API_URL, { headers: { Accept: 'application/json' } });
+      if (!response.ok) {
+        throw new Error(`Store API responded ${response.status}`);
+      }
+
+      const remoteStore = (await response.json()) as AcademyStore | null;
+      if (remoteStore) {
+        this.state.set(this.normalizeStore(remoteStore));
+        localStorage.removeItem(STORE_KEY);
+        return;
+      }
+
+      await this.saveDockerStore(this.store());
+      localStorage.removeItem(STORE_KEY);
+    } catch (error) {
+      console.warn('No se pudo cargar el store desde Docker. Se usara el estado inicial en memoria.', error);
+    }
+  }
+
+  private async saveDockerStore(store: AcademyStore): Promise<void> {
+    try {
+      const response = await fetch(STORE_API_URL, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(store),
+      });
+      if (!response.ok) {
+        throw new Error(`Store API responded ${response.status}`);
+      }
+    } catch (error) {
+      console.warn('No se pudo guardar el store en Docker.', error);
+    }
   }
 
   private isBrowser(): boolean {
@@ -807,11 +905,21 @@ export class AcademyDataService {
       teacherProfiles: store.teacherProfiles.map((profile) => ({
         ...profile,
         canCreateCases: profile.canCreateCases ?? false,
+        avatarId: normalizeTeacherAvatarId(profile.avatarId),
+        characterName: profile.characterName ?? '',
+        avatarConfigured: profile.avatarConfigured ?? false,
       })),
       studentProfiles: store.studentProfiles.map((p) => ({
         ...p,
         nickname: p.nickname ?? '',
-        avatarId: p.avatarId ?? 'neural-01',
+        avatarId: normalizeAvatarId(p.avatarId),
+        characterName: p.characterName ?? '',
+        avatarLook: p.avatarLook
+          ? normalizeAvatarLook(p.avatarLook)
+          : migrateLegacyLook({ appearance: p.appearance, accessories: p.accessories }),
+        rpmAvatarUrl: p.rpmAvatarUrl?.trim() || undefined,
+        accessories: normalizeAccessories(p.accessories),
+        appearance: normalizeAppearance(p.appearance),
         onboardingCompleted: p.onboardingCompleted ?? false,
       })),
       platformSettings: store.platformSettings ?? {
@@ -1127,7 +1235,7 @@ export class AcademyDataService {
           userId: student.id,
           code: 'EST-001',
           nickname: '',
-          avatarId: 'neural-01',
+          avatarId: DEFAULT_AVATAR_ID,
           onboardingCompleted: false,
           createdAt: now,
         },

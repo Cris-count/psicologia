@@ -29,6 +29,21 @@ export const STUDENT_ROUTES: Routes = [
       },
 
       {
+        path: 'mission/:groupId/:taskId',
+        loadComponent: () => import('./pages/student-mission.page').then((m) => m.StudentMissionPage),
+        canActivate: [studentProfileGuard],
+      },
+      {
+
+        path: 'perfil',
+
+        loadComponent: () => import('./pages/student-customize.page').then((m) => m.StudentCustomizePage),
+
+        canActivate: [studentProfileGuard],
+
+      },
+
+      {
 
         path: '',
 

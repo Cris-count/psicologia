@@ -4,10 +4,11 @@ import { AuthService } from '../../../services/auth.service';
 import { StudentProfileService } from '../../../shared/guide/services/student-profile.service';
 
 /** Redirige a onboarding si el estudiante no completó su perfil. */
-export const studentProfileGuard: CanActivateFn = () => {
+export const studentProfileGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);
   const profile = inject(StudentProfileService);
   const router = inject(Router);
+  await auth.ready;
 
   if (!auth.currentUser() || auth.currentUser()?.role !== 'STUDENT') {
     return router.createUrlTree(['/login']);
@@ -19,10 +20,11 @@ export const studentProfileGuard: CanActivateFn = () => {
 };
 
 /** Solo permite onboarding si aún no está completado. */
-export const studentOnboardingGuard: CanActivateFn = () => {
+export const studentOnboardingGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);
   const profile = inject(StudentProfileService);
   const router = inject(Router);
+  await auth.ready;
 
   if (!auth.currentUser() || auth.currentUser()?.role !== 'STUDENT') {
     return router.createUrlTree(['/login']);

@@ -36,13 +36,13 @@ import { GUIDE_SCROLL_ROOT } from '../../../shared/guide/components/guide-assist
       :host {
         display: block;
         position: relative;
-        min-height: 100vh;
+        min-height: 100svh;
       }
 
       .student-module-scroll-root {
         position: relative;
         z-index: 1;
-        min-height: 100vh;
+        min-height: 100svh;
       }
     `,
   ],

@@ -1,10 +1,17 @@
 import { Routes } from '@angular/router';
+import { teacherCustomizeGuard, teacherProfileGuard } from './guards/teacher-profile.guard';
 import { TeacherShellComponent } from './layout/teacher-shell.component';
 
 export const TEACHER_ROUTES: Routes = [
   {
+    path: 'perfil',
+    loadComponent: () => import('./pages/teacher-customize.page').then((m) => m.TeacherCustomizePage),
+    canActivate: [teacherCustomizeGuard],
+  },
+  {
     path: '',
     component: TeacherShellComponent,
+    canActivate: [teacherProfileGuard],
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'resumen' },
       {

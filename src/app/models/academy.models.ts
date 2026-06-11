@@ -18,6 +18,15 @@ export interface User {
   updatedAt: string;
 }
 
+export type TeacherAvatarId =
+  | 'teach-valentina'
+  | 'teach-camila'
+  | 'teach-andres'
+  | 'teach-isabella'
+  | 'teach-sebastian'
+  | 'teach-maria'
+  | 'teach-tomas';
+
 export interface TeacherProfile {
   id: string;
   userId: string;
@@ -25,18 +34,81 @@ export interface TeacherProfile {
   area: string;
   /** REQ-01: solo docentes con este flag pueden crear casos (REQ-02). */
   canCreateCases: boolean;
+  avatarId?: TeacherAvatarId;
+  characterName?: string;
+  avatarConfigured?: boolean;
   createdAt: string;
 }
 
-export type AvatarId = 'neural-01' | 'psyche-02' | 'cortex-03' | 'mind-04' | 'synapse-05' | 'pulse-06';
+export type AvatarId =
+  | 'psych-alejandro'
+  | 'psych-valeria'
+  | 'psych-mateo'
+  | 'psych-sofia'
+  | 'psych-daniel'
+  | 'psych-isabella'
+  | 'psych-simon'
+  | 'psych-camila'
+  | 'psych-sebastian'
+  | 'psych-laura';
 export type AvatarRarity = 'COMMON' | 'RARE' | 'EPIC';
+
+export type AccessorySlot = 'headwear' | 'eyewear' | 'badge' | 'effect';
+
+export type HeadwearId = 'head-none' | 'visor-cyber' | 'cap-field' | 'crown-elite';
+export type EyewearId = 'eyes-none' | 'lens-lab' | 'shade-cool';
+export type BadgeAccessoryId = 'badge-none' | 'badge-psi' | 'badge-neural';
+export type EffectId = 'effect-none' | 'aura-soft' | 'aura-flare';
+
+export type AccessoryId = HeadwearId | EyewearId | BadgeAccessoryId | EffectId;
+
+export interface AvatarAccessories {
+  headwear: HeadwearId;
+  eyewear: EyewearId;
+  badge: BadgeAccessoryId;
+  effect: EffectId;
+}
+
+export type AppearanceSlot = 'skin' | 'hairColor' | 'hairStyle' | 'eyes' | 'outfit';
+
+export type SkinToneId = 'skin-1' | 'skin-2' | 'skin-3' | 'skin-4' | 'skin-5' | 'skin-6' | 'skin-7' | 'skin-8';
+export type HairColorId =
+  | 'hair-1'
+  | 'hair-2'
+  | 'hair-3'
+  | 'hair-4'
+  | 'hair-5'
+  | 'hair-6'
+  | 'hair-7'
+  | 'hair-8'
+  | 'hair-9'
+  | 'hair-10';
+export type HairStyleId = 'style-short' | 'style-medium' | 'style-long' | 'style-bun' | 'style-curly' | 'style-fade';
+export type EyeColorId = 'eye-1' | 'eye-2' | 'eye-3' | 'eye-4' | 'eye-5' | 'eye-6';
+export type OutfitColorId = 'cloth-1' | 'cloth-2' | 'cloth-3' | 'cloth-4' | 'cloth-5' | 'cloth-6' | 'cloth-7' | 'cloth-8';
+
+export type AppearanceOptionId = SkinToneId | HairColorId | HairStyleId | EyeColorId | OutfitColorId;
+
+export interface AvatarAppearance {
+  skinTone: SkinToneId;
+  hairColor: HairColorId;
+  hairStyle: HairStyleId;
+  eyeColor: EyeColorId;
+  outfitColor: OutfitColorId;
+}
 
 export interface StudentProfile {
   id: string;
   userId: string;
   code: string;
   nickname?: string;
+  characterName?: string;
   avatarId?: AvatarId;
+  avatarLook?: import('../shared/guide/data/avatar-look.types').AvatarLook;
+  /** URL GLB exportada por Ready Player Me (avatar estilo Bitmoji). */
+  rpmAvatarUrl?: string;
+  appearance?: AvatarAppearance;
+  accessories?: AvatarAccessories;
   onboardingCompleted?: boolean;
   createdAt: string;
   updatedAt?: string;

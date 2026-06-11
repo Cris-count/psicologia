@@ -1,8 +1,8 @@
 :host {
   display: block;
-  height: 100dvh;
-  max-height: 100dvh;
-  overflow: hidden;
+  min-height: 100svh;
+  overflow-x: hidden;
+  overflow-y: auto;
   position: relative;
 }
 
@@ -46,8 +46,7 @@
 .lobby-shell {
   position: relative;
   z-index: 2;
-  height: 100dvh;
-  max-height: 100dvh;
+  min-height: 100svh;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   padding: clamp(0.5rem, 1.5vh, 0.85rem) clamp(1rem, 3vw, 2rem) clamp(0.4rem, 1vh, 0.65rem);
@@ -188,7 +187,6 @@
   font-size: clamp(0.82rem, 1.8vh, 0.92rem);
   line-height: 1.45;
 }
-
 .lobby-eyebrow {
   margin: 0 0 0.5rem;
   font-family: var(--psy-font-hud);
@@ -232,6 +230,7 @@
 .login-portal {
   position: relative;
   align-self: center;
+  width: min(100%, 400px);
   max-height: 100%;
   animation: portal-enter 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
 }
@@ -434,6 +433,52 @@
   color: var(--psy-accent);
   font-family: var(--psy-font-display);
   font-size: 0.75rem;
+}
+
+.lobby-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  animation: title-rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both;
+}
+
+.stat-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.72rem 1rem;
+  border: 2px solid var(--psy-line);
+  border-radius: var(--psy-radius-sm);
+  background: rgba(22, 30, 58, 0.7);
+  backdrop-filter: blur(12px);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.stat-chip:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--psy-shadow-glow-blue);
+}
+
+.stat-chip .material-symbols-outlined {
+  color: var(--psy-gold);
+  font-size: 1.4rem;
+}
+
+.stat-chip strong {
+  display: block;
+  font-family: var(--psy-font-display);
+  font-size: 1.1rem;
+  color: var(--psy-gold);
+}
+
+.stat-chip small {
+  color: var(--psy-muted);
+  font-family: var(--psy-font-hud);
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 /* Footer + stats en una sola franja compacta */
@@ -673,5 +718,107 @@
   .login-portal,
   .lobby-active-users {
     animation: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .lobby-shell {
+    padding: 0.85rem;
+  }
+
+  .lobby-topbar,
+  .lobby-footer {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .lobby-brand img {
+    width: 44px;
+    height: 44px;
+  }
+
+  .brand-title {
+    font-size: 0.98rem;
+  }
+
+  .brand-sub {
+    font-size: 0.52rem;
+  }
+
+  .lobby-top-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .lobby-tagline {
+    font-size: 0.92rem;
+  }
+
+  .portal-frame {
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .demo-panel {
+    font-size: 0.74rem;
+  }
+
+  .stat-chip {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-height: 760px) and (min-width: 901px) {
+  .lobby-shell {
+    padding-block: 0.75rem;
+  }
+
+  .lobby-stage {
+    min-height: auto;
+    padding-block: 0.75rem;
+  }
+
+  .lobby-brand img {
+    width: 44px;
+    height: 44px;
+  }
+
+  .title-line {
+    font-size: clamp(2.1rem, 4.6vw, 3.4rem);
+  }
+
+  .lobby-tagline,
+  .portal-header p {
+    font-size: 0.88rem;
+  }
+
+  .portal-frame {
+    gap: 0.85rem;
+    padding: 1rem;
+  }
+
+  .field-shell input {
+    height: 44px;
+  }
+
+  .portal-submit {
+    min-height: 48px;
+  }
+
+  .lobby-character-layer app-guide-character {
+    bottom: 1rem;
+    height: min(86svh, 760px);
+  }
+}
+
+@media (min-width: 1440px) {
+  .lobby-stage {
+    max-width: 1280px;
+  }
+
+  .lobby-character-layer app-guide-character {
+    left: clamp(1rem, 5vw, 8rem);
+    width: min(48vw, 700px);
   }
 }

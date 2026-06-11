@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Login - MIND-SPHERE</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700;800&family=Nunito:wght@400;600;700;800&family=Orbitron:wght@600;700;800&family=Material+Symbols+Outlined&display=swap');
+    :root {
+      --bg: #13102a;
+      --panel: rgba(42, 36, 78, 0.94);
+      --panel-2: rgba(26, 21, 53, 0.92);
+      --line: rgba(155, 143, 217, 0.2);
+      --gold: #f4c542;
+      --gold-dark: #d4a82e;
+      --accent: #d65db1;
+      --primary: #6b8cff;
+      --purple: #7b5cbf;
+      --ink: #f4f0fa;
+      --muted: #b8aed4;
+      --success: #52c9a8;
+      --display: 'Fredoka', 'Nunito', sans-serif;
+      --body: 'Nunito', system-ui, sans-serif;
+      --hud: 'Orbitron', 'Nunito', sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100svh;
+      overflow-x: hidden;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--body);
+    }
+
+    .background {
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(circle at 18% 12%, rgba(107, 140, 255, 0.24), transparent 32%),
+        radial-gradient(circle at 80% 24%, rgba(214, 93, 177, 0.18), transparent 34%),
+        radial-gradient(circle at 45% 82%, rgba(244, 197, 66, 0.08), transparent 38%),
+        linear-gradient(145deg, #09071d 0%, #13102a 52%, #090816 100%);
+      z-index: 0;
+    }
+
+    .background::before {
+      content: '';
+      position: absolute;
+      inset: -20%;
+      background-image:
+        linear-gradient(rgba(155, 143, 217, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(155, 143, 217, 0.08) 1px, transparent 1px);
+      background-size: 58px 58px;
+      transform: perspective(760px) rotateX(58deg) translateY(18%);
+      transform-origin: center bottom;
+      opacity: 0.35;
+    }
+
+    .gary-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .gary-layer img {
+      position: absolute;
+      bottom: clamp(1.5rem, 5vh, 4.5rem);
+      left: clamp(-3rem, 2vw, 5rem);
+      width: min(58vw, 660px);
+      height: min(88svh, 860px);
+      object-fit: contain;
+      object-position: center bottom;
+      filter: drop-shadow(0 8px 24px rgba(79, 195, 255, 0.12)) drop-shadow(0 20px 40px rgba(0, 0, 0, 0.5));
+    }
+
+    .lobby-shell {
+      position: relative;
+      z-index: 2;
+      min-height: 100svh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: 1rem clamp(1rem, 3vw, 2rem);
+    }
+
+    .topbar,
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .brand img {
+      width: 52px;
+      height: 52px;
+      filter: drop-shadow(0 4px 10px rgba(244, 197, 66, 0.22));
+    }
+
+    .brand-title {
+      display: block;
+      font-family: var(--display);
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      color: var(--gold);
+    }
+
+    .brand-sub {
+      display: block;
+      font-family: var(--hud);
+      font-size: 0.58rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .icon-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      min-height: 40px;
+      padding: 0 0.85rem;
+      border: 2px solid var(--line);
+      border-radius: 999px;
+      background: rgba(34, 28, 66, 0.75);
+      color: var(--muted);
+      font-family: var(--hud);
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .stage {
+      display: grid;
+      grid-template-columns: minmax(280px, 1fr) minmax(300px, 400px);
+      gap: clamp(1.5rem, 4vw, 4rem);
+      align-items: center;
+      max-width: 1180px;
+      width: 100%;
+      margin: auto;
+      padding: 1rem 0 1.5rem;
+      min-height: min(680px, calc(100svh - 9rem));
+    }
+
+    .copy {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(1rem, 2.4vh, 1.5rem);
+      max-width: 420px;
+      margin-left: auto;
+      padding-right: clamp(0rem, 4vw, 2rem);
+    }
+
+    .eyebrow {
+      margin: 0 0 0.75rem;
+      font-family: var(--hud);
+      font-size: 0.68rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    h1 {
+      margin: 0;
+      font-family: var(--display);
+      line-height: 0.95;
+    }
+
+    .title-line {
+      display: block;
+      font-size: clamp(2.4rem, 5.5vw, 4.2rem);
+      font-weight: 800;
+      text-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+    }
+
+    .title-accent {
+      background: linear-gradient(135deg, var(--gold), var(--accent), var(--purple));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .tagline {
+      margin: 1rem 0 0;
+      color: var(--muted);
+      font-size: 1.05rem;
+      line-height: 1.6;
+    }
+
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .stat-chip {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      width: fit-content;
+      max-width: 100%;
+      padding: 0.72rem 1rem;
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      background: rgba(22, 30, 58, 0.7);
+      backdrop-filter: blur(12px);
+    }
+
+    .stat-chip .material-symbols-outlined {
+      color: var(--gold);
+      font-size: 1.4rem;
+    }
+
+    .stat-chip strong {
+      display: block;
+      font-family: var(--display);
+      font-size: 1.1rem;
+      color: var(--gold);
+    }
+
+    .stat-chip small {
+      color: var(--muted);
+      font-family: var(--hud);
+      font-size: 0.58rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .portal {
+      position: relative;
+      width: min(100%, 400px);
+    }
+
+    .portal-glow {
+      position: absolute;
+      inset: -20%;
+      background: radial-gradient(circle, rgba(107, 140, 255, 0.12), transparent 65%);
+      filter: blur(40px);
+    }
+
+    .portal-frame {
+      position: relative;
+      display: grid;
+      gap: 1.25rem;
+      padding: clamp(1.25rem, 3vw, 2rem);
+      border: 2px solid rgba(244, 197, 66, 0.38);
+      border-radius: 24px;
+      background: linear-gradient(165deg, var(--panel), var(--panel-2));
+      box-shadow: 0 8px 0 rgba(0, 0, 0, 0.28), 0 20px 48px rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(20px);
+    }
+
+    .portal-frame::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      border-radius: 24px 24px 0 0;
+      background: linear-gradient(90deg, var(--primary), var(--accent), var(--gold), var(--purple));
+    }
+
+    .portal-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.3rem 0.65rem;
+      border-radius: 999px;
+      border: 1px solid rgba(82, 201, 168, 0.45);
+      background: rgba(82, 201, 168, 0.12);
+      color: var(--success);
+      font-family: var(--hud);
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+    }
+
+    h2 {
+      margin: 0.5rem 0 0.35rem;
+      font-family: var(--display);
+      font-size: 1.6rem;
+      color: var(--gold);
+    }
+
+    .portal-header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .form {
+      display: grid;
+      gap: 1rem;
+    }
+
+    label {
+      display: grid;
+      gap: 0.45rem;
+      font-family: var(--display);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .label-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .label-row a {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.78rem;
+    }
+
+    .field {
+      position: relative;
+      display: block;
+    }
+
+    input {
+      width: 100%;
+      height: 50px;
+      padding: 0 2.75rem 0 1rem;
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      background: rgba(10, 14, 26, 0.7);
+      color: var(--ink);
+    }
+
+    .field .material-symbols-outlined {
+      position: absolute;
+      right: 0.85rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+    }
+
+    .submit {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      min-height: 56px;
+      border: 0;
+      border-radius: 12px;
+      background: linear-gradient(180deg, #ffe066 0%, var(--gold) 45%, var(--gold-dark) 100%);
+      color: #1a1040;
+      font-family: var(--display);
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      box-shadow: 0 6px 0 #b8860b, 0 12px 32px rgba(255, 201, 71, 0.35);
+    }
+
+    .demo {
+      display: grid;
+      gap: 0.2rem;
+      padding: 0.85rem;
+      border-radius: 12px;
+      border-left: 4px solid var(--accent);
+      background: rgba(0, 229, 255, 0.06);
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .demo strong {
+      color: var(--accent);
+      font-family: var(--display);
+    }
+
+    .footer {
+      font-family: var(--hud);
+      font-size: 0.62rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding-top: 0.5rem;
+      border-top: 1px solid var(--line);
+    }
+
+    @media (max-width: 900px) {
+      .stage {
+        grid-template-columns: 1fr;
+        max-width: 480px;
+        min-height: auto;
+        gap: 1.25rem;
+      }
+      .copy {
+        margin-inline: auto;
+        padding-right: 0;
+        text-align: center;
+        max-width: 100%;
+      }
+      .stats {
+        justify-content: center;
+      }
+      .gary-layer img {
+        left: 50%;
+        bottom: 2vh;
+        transform: translateX(-50%);
+        width: min(95vw, 480px);
+        height: min(48svh, 500px);
+        opacity: 0.35;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .lobby-shell { padding: 0.85rem; }
+      .topbar, .footer { align-items: flex-start; flex-wrap: wrap; }
+      .top-actions { width: 100%; justify-content: flex-end; }
+      .stat-chip { width: 100%; justify-content: center; }
+      .portal-frame { padding: 1rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="background"></div>
+
+  <div class="gary-layer" aria-hidden="true">
+    <img src="../../public/assets/guide/nexa-hero-premium-cutout.png" alt="" />
+  </div>
+
+  <main class="lobby-shell">
+    <header class="topbar">
+      <a class="brand" href="#">
+        <img src="../../public/mind-sphere-logo.svg" alt="" />
+        <div>
+          <span class="brand-title">MIND-SPHERE</span>
+          <span class="brand-sub">Neural Mind Engine</span>
+        </div>
+      </a>
+
+      <div class="top-actions">
+        <button class="icon-chip" type="button"><span class="material-symbols-outlined">volume_up</span>SFX</button>
+        <button class="icon-chip" type="button"><span class="material-symbols-outlined">language</span>ES</button>
+      </div>
+    </header>
+
+    <section class="stage">
+      <div class="copy">
+        <div>
+          <p class="eyebrow">Simulador psicologico futurista premium</p>
+          <h1>
+            <span class="title-line">ENTRA A</span>
+            <span class="title-line title-accent">MIND-SPHERE</span>
+          </h1>
+          <p class="tagline">Casos clinicos · Retroalimentacion · Progreso gamificado</p>
+        </div>
+
+        <aside class="stats" aria-label="Estadisticas del servidor">
+          <div class="stat-chip">
+            <span class="material-symbols-outlined">groups</span>
+            <div>
+              <strong>1,284</strong>
+              <small>Jugadores activos</small>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div class="portal">
+        <div class="portal-glow"></div>
+        <div class="portal-frame">
+          <div class="portal-header">
+            <span class="portal-badge">ONLINE</span>
+            <h2>Iniciar sesion</h2>
+            <p>Un solo acceso. El sistema detecta tu rol automaticamente.</p>
+          </div>
+
+          <form class="form">
+            <label>
+              Correo institucional
+              <span class="field">
+                <input type="email" placeholder="nombre@institucion.edu" />
+                <span class="material-symbols-outlined">badge</span>
+              </span>
+            </label>
+
+            <label>
+              <span class="label-row">
+                Contrasena
+                <a href="#">Olvidaste tu clave?</a>
+              </span>
+              <span class="field">
+                <input type="password" placeholder="••••••••" />
+                <span class="material-symbols-outlined">lock</span>
+              </span>
+            </label>
+
+            <button class="submit" type="button">
+              <span class="material-symbols-outlined">play_arrow</span>
+              JUGAR AHORA
+            </button>
+          </form>
+
+          <div class="demo">
+            <strong>Demo - usa cualquier rol</strong>
+            <span>superadmin@demo.edu · maestro@demo.edu · estudiante@demo.edu</span>
+            <span>Contrasena: demo123</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span>System Status: Optimal</span>
+      <span>2026 NEURAL LABS INC.</span>
+    </footer>
+  </main>
+</body>
+</html>

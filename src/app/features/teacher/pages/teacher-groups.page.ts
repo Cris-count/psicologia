@@ -91,6 +91,7 @@ import { AuthService } from '../../../services/auth.service';
         grid-template-columns: 1fr auto;
         gap: 0.5rem;
         align-items: center;
+        min-width: 0;
       }
 
       .group-item.selected {
@@ -106,6 +107,13 @@ import { AuthService } from '../../../services/auth.service';
         gap: 0.75rem;
         cursor: pointer;
         flex: 1;
+        min-width: 0;
+      }
+
+      @media (max-width: 560px) {
+        .group-item {
+          grid-template-columns: 1fr;
+        }
       }
 
       .ghost-button.danger {

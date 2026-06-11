@@ -1,12 +1,14 @@
 import { CommonModule } from '@angular/common';
-import { Component, HostListener, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, HostListener, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { APP_LOGO_PATH, APP_NAME, APP_SHORT_TAGLINE, GUIDE_NAME, GUIDE_TITLE } from '../core/branding.constants';
+import { APP_LOGO_PATH, APP_NAME, APP_SHORT_TAGLINE } from '../core/branding.constants';
+import { AcademyDataService } from '../services/academy-data.service';
 import { AuthService } from '../services/auth.service';
 import { GuideCharacterComponent } from '../shared/guide/components/guide-character/guide-character.component';
 import { GuideService } from '../shared/guide/services/guide.service';
 import { StudentProfileService } from '../shared/guide/services/student-profile.service';
+import { TeacherProfileService } from '../shared/guide/services/teacher-profile.service';
 import { PresenceService } from '../services/presence.service';
 import { GameLoaderService } from '../shared/services/game-loader.service';
 import { GameSfxService } from '../shared/services/game-sfx.service';
@@ -65,12 +67,15 @@ import { ThreeBackgroundComponent } from '../shared/ui/three-background/three-ba
             <p class="lobby-tagline">Casos clínicos · Retroalimentación · Progreso gamificado</p>
           </div>
 
-          <div class="lobby-npc-dialogue" role="region" [attr.aria-label]="'Diálogo de ' + guideName">
-            <div class="npc-dialogue-inner">
-              <span class="npc-badge">{{ guideTitle }}</span>
-              <p class="npc-message">{{ guide.message() }}</p>
+          <aside class="lobby-stats" aria-label="Estadísticas del servidor">
+            <div class="stat-chip">
+              <span class="material-symbols-outlined" aria-hidden="true">groups</span>
+              <div>
+                <strong>{{ activePlayers() }}</strong>
+                <small>Jugadores activos</small>
+              </div>
             </div>
-          </div>
+          </aside>
         </div>
 
         <div class="login-portal" [class.is-loading]="submitting()">
@@ -162,13 +167,13 @@ export class LoginPage implements OnInit {
   protected readonly appName = APP_NAME;
   protected readonly appTagline = APP_SHORT_TAGLINE;
   protected readonly appLogo = APP_LOGO_PATH;
-  protected readonly guideName = GUIDE_NAME;
-  protected readonly guideTitle = GUIDE_TITLE;
   private readonly auth = inject(AuthService);
+  private readonly data = inject(AcademyDataService);
   private readonly router = inject(Router);
   private readonly loader = inject(GameLoaderService);
   protected readonly guide = inject(GuideService);
   private readonly studentProfile = inject(StudentProfileService);
+  private readonly teacherProfile = inject(TeacherProfileService);
   protected readonly sfx = inject(GameSfxService);
   protected readonly presence = inject(PresenceService);
 
@@ -178,6 +183,9 @@ export class LoginPage implements OnInit {
   readonly submitting = signal(false);
   readonly parallaxX = signal(0);
   readonly parallaxY = signal(0);
+  protected readonly activePlayers = computed(
+    () => this.data.allStudents().filter((student) => student.status === 'ACTIVE').length,
+  );
 
   ngOnInit(): void {
     this.guide.setVisible(true);
@@ -223,6 +231,9 @@ export class LoginPage implements OnInit {
     let route = this.auth.homeRouteFor(user.role);
     if (user.role === 'STUDENT' && this.studentProfile.needsOnboarding()) {
       route = '/student/onboarding';
+    }
+    if (user.role === 'TEACHER' && this.teacherProfile.needsProfileSetup()) {
+      route = '/teacher/perfil';
     }
 
     await this.router.navigateByUrl(route);
