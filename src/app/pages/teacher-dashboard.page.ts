@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { GameGroup, GroupTask, Question, Scenario, Situation, User } from '../models/academy.models';
 import { AcademyDataService } from '../services/academy-data.service';
 import { AuthService } from '../services/auth.service';
+import { NotificationService } from '../services/notification.service';
 import { GameAnimateDirective } from '../shared/directives/game-animate.directive';
 import { GameHudComponent } from '../shared/ui/game-hud/game-hud.component';
 import { GameLogoutButtonComponent } from '../shared/ui/game-logout-button/game-logout-button.component';
@@ -329,6 +330,7 @@ export class TeacherDashboardPage {
   constructor(
     public readonly data: AcademyDataService,
     public readonly auth: AuthService,
+    private readonly notify: NotificationService,
   ) {}
 
   teacher(): User | null {
@@ -492,8 +494,18 @@ export class TeacherDashboardPage {
   }
 
   addStudentToGroup(): void {
-    if (this.selectedGroupId && this.selectedStudentId) {
-      this.data.addStudentToGroup(this.selectedGroupId, this.selectedStudentId);
+    if (!this.selectedGroupId || !this.selectedStudentId) return;
+    const student = this.data.store().users.find((u) => u.id === this.selectedStudentId);
+    const group = this.groups().find((g) => g.id === this.selectedGroupId);
+    const teacher = this.teacher();
+    this.data.addStudentToGroup(this.selectedGroupId, this.selectedStudentId);
+    if (student && group) {
+      void this.notify.notifyStudentAddedToGroup(
+        student.email,
+        group.name,
+        this.data.documentIdForStudent(student.id),
+        teacher?.name,
+      );
     }
   }
 

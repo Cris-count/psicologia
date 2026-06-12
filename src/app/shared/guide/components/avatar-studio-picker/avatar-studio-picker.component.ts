@@ -47,7 +47,7 @@ import {
             (click)="pick(item.id)"
           >
             @if (item.hex && activeSlot() !== 'hairStyle' && activeSlot() !== 'eyebrows' && activeSlot() !== 'headwear' && activeSlot() !== 'eyewear' && activeSlot() !== 'earrings' && activeSlot() !== 'necklace' && activeSlot() !== 'facialHair') {
-              <span class="swatch" [style.background]="item.hex2 ? 'linear-gradient(135deg,' + item.hex + ',' + (item.hex2 ?? item.hex) + ')' : item.hex"></span>
+              <span class="swatch" [style.background]="item.hex2 ? 'linear-gradient(135deg,' + item.hex + ',' + item.hex2 + ')' : item.hex"></span>
             } @else {
               <span class="style-icon">{{ iconFor(item.id) }}</span>
             }

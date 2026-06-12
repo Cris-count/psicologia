@@ -136,7 +136,7 @@ export class TeacherCustomizePage implements OnInit {
 
   onBack(): void {
     if (this.isSetup()) {
-      void this.router.navigateByUrl('/login');
+      this.auth.logout();
       return;
     }
     void this.router.navigateByUrl('/teacher/resumen');

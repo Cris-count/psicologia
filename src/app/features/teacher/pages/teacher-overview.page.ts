@@ -124,7 +124,7 @@ export class TeacherOverviewPage {
 
   readonly recentCases = computed(() => {
     const teacher = this.auth.currentUser();
-    return teacher ? this.data.situationsByTeacher(teacher.id).slice(0, 5) : [];
+    return teacher ? this.data.situationsForTeacher(teacher.id).slice(0, 5) : [];
   });
 
   readonly canCreate = computed(() => {

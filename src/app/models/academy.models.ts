@@ -100,6 +100,7 @@ export interface AvatarAppearance {
 export interface StudentProfile {
   id: string;
   userId: string;
+  /** Tarjeta de identidad / documento (login estudiante). */
   code: string;
   nickname?: string;
   characterName?: string;
@@ -155,6 +156,10 @@ export interface Situation {
   resources?: string;
   /** Mundo 2D donde se desarrolla la misión */
   mapEnvironment?: MapEnvironmentKey;
+  /** Título del panel introductorio del simulador (solo al inicio). */
+  generalContextTitle?: string;
+  /** Contexto general del caso (solo al inicio del simulador). */
+  generalContextBody?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -166,6 +171,10 @@ export interface Scenario {
   context: string;
   instructions: string;
   orderIndex: number;
+  /** Título del panel de contexto previo a las preguntas. */
+  contextPanelTitle?: string;
+  /** Texto extendido del contexto antes de iniciar preguntas. */
+  contextPanelBody?: string;
   /** Punto interactivo en el mapa (NPC, terminal, paciente, etc.) */
   interactableKind?: InteractableKindKey;
   createdAt: string;
@@ -218,6 +227,12 @@ export interface StudentProgress {
   progressPercentage: number;
   completed: boolean;
   updatedAt: string;
+  notaFinal?: number;
+  respuestasCorrectas?: number;
+  respuestasIncorrectas?: number;
+  porcentajeAcierto?: number;
+  intentoId?: string;
+  completedAt?: string;
 }
 
 export interface PlatformSettings {
@@ -238,7 +253,18 @@ export interface AcademyStore {
   groupTasks: GroupTask[];
   studentAnswers: StudentAnswer[];
   studentProgress: StudentProgress[];
+  rubricas?: import('./evaluation.models').RubricaEvaluacion[];
+  intentosEstudiante?: import('./evaluation.models').IntentoEstudiante[];
   platformSettings?: PlatformSettings;
+  taskSessions?: import('./session.models').TaskSession[];
+  sessionAuthorizations?: import('./session.models').SessionAuthorization[];
+  notifications?: import('./session.models').NotificationRecord[];
+}
+
+export interface TaskInviteeDraft {
+  name: string;
+  email: string;
+  documentId: string;
 }
 
 export interface TaskDraft {
@@ -246,7 +272,20 @@ export interface TaskDraft {
   situationId: string;
   scenarioIds: string[];
   questionIds: string[];
+  scheduledStartAt?: string;
+  scheduledEndAt?: string;
+  maxDurationMinutes?: number;
+  estimatedMinutes?: number;
+  customMessage?: string;
+  academicSpace?: string;
+  location?: string;
+  authorizedStudentIds?: string[];
+  invitees?: TaskInviteeDraft[];
 }
+
+export type ScheduleTaskResult =
+  | { ok: true; task: GroupTask; session: import('./session.models').TaskSession; authorizations: import('./session.models').SessionAuthorization[] }
+  | { ok: false; error: string };
 
 export interface QuestionDraft {
   statement: string;
@@ -267,6 +306,8 @@ export interface SituationDraft {
   category: SituationCategory;
   resources?: string;
   mapEnvironment?: MapEnvironmentKey;
+  generalContextTitle?: string;
+  generalContextBody?: string;
 }
 
 export interface ScenarioDraft {

@@ -47,6 +47,12 @@ export const TEACHER_NAV_ITEMS: TeacherNavItem[] = [
     iconUrl: '/assets/ui/teacher-nav/resultados.svg?v=3',
   },
   {
+    id: 'rubrica',
+    label: 'Rúbrica',
+    route: '/teacher/rubrica',
+    iconUrl: '/assets/ui/teacher-nav/casos.png?v=3',
+  },
+  {
     id: 'perfil',
     label: 'Mi perfil',
     route: '/teacher/perfil',

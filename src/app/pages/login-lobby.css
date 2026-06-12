@@ -249,7 +249,7 @@
   display: grid;
   gap: clamp(0.75rem, 1.5vh, 1.1rem);
   padding: clamp(1rem, 2vh, 1.5rem);
-  border: 2px solid var(--psy-border-gold);
+  border: none;
   border-radius: var(--psy-radius-lg);
   background: linear-gradient(165deg, rgba(42, 36, 78, 0.94), rgba(26, 21, 53, 0.92));
   box-shadow:
@@ -257,19 +257,34 @@
     0 20px 48px rgba(0, 0, 0, 0.4),
     0 0 24px rgba(107, 140, 255, 0.08);
   backdrop-filter: blur(20px);
+  isolation: isolate;
+}
+
+.portal-frame > * {
+  position: relative;
+  z-index: 1;
 }
 
 .portal-frame::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  border-radius: var(--psy-radius-lg) var(--psy-radius-lg) 0 0;
+  inset: 0;
+  padding: 2px;
+  border-radius: inherit;
   background: linear-gradient(90deg, var(--psy-primary), var(--psy-accent), var(--psy-gold), var(--psy-purple));
   background-size: 200% auto;
   animation: title-shimmer 3s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  filter: drop-shadow(0 0 6px rgba(214, 93, 177, 0.45)) drop-shadow(0 0 10px rgba(244, 197, 66, 0.25));
 }
 
 .portal-header h2 {

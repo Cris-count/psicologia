@@ -46,6 +46,10 @@ export const TEACHER_ROUTES: Routes = [
         path: 'resultados',
         loadComponent: () => import('./pages/teacher-results.page').then((m) => m.TeacherResultsPage),
       },
+      {
+        path: 'rubrica',
+        loadComponent: () => import('./pages/teacher-rubric.page').then((m) => m.TeacherRubricPage),
+      },
     ],
   },
 ];

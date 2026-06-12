@@ -1,9 +1,10 @@
 import { Question, Scenario } from '../../../models/academy.models';
 
 export type MissionPhase =
-  | 'briefing'
+  | 'intro'
   | 'map'
   | 'zone-intro'
+  | 'scenario-context'
   | 'decision'
   | 'feedback'
   | 'mission-complete';
@@ -22,8 +23,8 @@ export interface MissionZone {
 }
 
 export interface MissionBlueprint {
-  briefingTitle: string;
-  briefingContext: string;
+  introTitle: string;
+  introContext: string;
   objective: string;
   difficulty: string;
   zones: MissionZone[];

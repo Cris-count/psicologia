@@ -38,6 +38,30 @@ export class AuthService {
     return this.data.authenticate(email, password) ?? null;
   }
 
+  /** Estudiante: correo + tarjeta de identidad. Docente/admin: correo + contraseña. */
+  authenticateLogin(email: string, credential: string): { user: User | null; error?: string } {
+    const trimmedEmail = email.trim();
+    const trimmedCredential = credential.trim();
+    if (!trimmedEmail || !trimmedCredential) {
+      return { user: null, error: 'Ingresa correo y tarjeta de identidad o contraseña.' };
+    }
+
+    const candidate = this.data.userByEmail(trimmedEmail);
+    if (candidate?.role === 'STUDENT') {
+      const user = this.data.authenticateStudentWithDocument(trimmedEmail, trimmedCredential);
+      if (!user) {
+        return { user: null, error: 'Correo universitario o tarjeta de identidad incorrectos.' };
+      }
+      return { user };
+    }
+
+    const staff = this.authenticateCredentials(trimmedEmail, trimmedCredential);
+    if (!staff) {
+      return { user: null, error: 'Correo o contraseña incorrectos.' };
+    }
+    return { user: staff };
+  }
+
   establishSession(user: User): void {
     this.userState.set(user);
     if (this.isBrowser()) {

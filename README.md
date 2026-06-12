@@ -10,7 +10,7 @@ El asistente guía oficial del simulador es **GARY**.
 |-----|--------|------------|
 | Superadmin | `superadmin@demo.edu` | `demo123` |
 | Maestro | `maestro@demo.edu` | `demo123` |
-| Estudiante | `estudiante@demo.edu` | `demo123` |
+| Estudiante | `estudiante@demo.edu` | Tarjeta: `1020304050` |
 
 ## Desarrollo local (sin Docker)
 
@@ -82,6 +82,45 @@ cp .env.example .env
 | `APP_PORT` | `8080` | Puerto host para produccion |
 | `DEV_PORT` | `4200` | Puerto host para desarrollo |
 | `API_PORT` | `3000` | Puerto host del API de persistencia |
+| `GEMINI_API_KEY` | — | Google AI (rúbrica, calificación, asistente) |
+| `APP_PUBLIC_URL` | `http://localhost:4200` | Enlace en correos a estudiantes |
+| `SMTP_HOST` | `smtp.gmail.com` | Servidor SMTP (Gmail) |
+| `SMTP_PORT` | `587` | Puerto TLS |
+| `SMTP_SECURE` | `false` | `true` solo si usas puerto 465 |
+| `SMTP_USER` | — | Tu cuenta `@gmail.com` |
+| `SMTP_PASS` | — | Contraseña de aplicación de Google (16 caracteres) |
+| `SMTP_FROM` | — | Remitente visible (ej. `MIND-SPHERE <tu@gmail.com>`) |
+
+### Notificaciones a estudiantes
+
+Cuando el docente **agrega un estudiante a un grupo**, el estudiante recibe una notificación **dentro de MIND-SPHERE**:
+
+1. El estudiante inicia sesión con correo universitario + tarjeta de identidad.
+2. En su home pulsa **Notificaciones**.
+3. Verá: *«Te agregaron al grupo …»*.
+
+No hace falta configurar Gmail para la bandeja in-app.
+
+### Agendar simulación (REQ-04) y credenciales por correo
+
+En **Docente → Agendar simulación** el profesor:
+
+1. Elige caso, escenarios y preguntas.
+2. Registra espacio académico, fechas, tiempo estimado/máximo, ubicación y mensaje.
+3. Selecciona estudiantes del grupo o invita nuevos (nombre + correo).
+4. Pulsa **Agendar y notificar por correo**.
+
+El sistema valida que el **tiempo máximo ≤ tiempo estimado**, guarda la simulación en estado **Sin iniciar** y envía un correo con la **URL de acceso**, el **correo** y la **tarjeta de identidad** del estudiante.
+
+**Ingreso estudiante (REQ-07):** correo universitario + **tarjeta de identidad** (sin contraseña). Demo: `estudiante@demo.edu` / `1020304050`.
+
+**Docente/admin:** correo + contraseña (demo: `maestro@demo.edu` / `demo123`).
+
+Si el estudiante intenta entrar después del **50% del tiempo** contado desde el **inicio oficial**, el acceso se **bloquea definitivamente**.
+
+#### Correo real (opcional SMTP)
+
+Si además quieres que llegue un email a la bandeja de Gmail, configura SMTP en `.env` con una **contraseña de aplicación** de Google (no es tu contraseña normal; Google la exige para apps externas). Sin eso, solo funciona la bandeja in-app de arriba.
 
 ## Build manual
 

@@ -9,10 +9,15 @@ type MissionWorldScene = import('./mission-phaser.scene').MissionWorldScene;
 let phaserBoot: Promise<typeof import('phaser')> | null = null;
 let sceneBoot: Promise<typeof import('./mission-phaser.scene')> | null = null;
 
+function resolvePhaserModule(mod: typeof import('phaser')): typeof import('phaser') {
+  const candidate = mod as typeof import('phaser') & { default?: typeof import('phaser') };
+  return (candidate.default ?? mod) as typeof import('phaser');
+}
+
 function loadPhaser(onProgress?: LoadProgressFn): Promise<typeof import('phaser')> {
   if (!phaserBoot) {
     onProgress?.(5, 'Motor Phaser');
-    phaserBoot = import('phaser');
+    phaserBoot = import('phaser').then(resolvePhaserModule);
   }
   return phaserBoot;
 }

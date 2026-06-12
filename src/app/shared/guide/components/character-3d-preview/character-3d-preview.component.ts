@@ -29,7 +29,7 @@ import { RpmAvatarEngine } from '../../../engines/rpm-avatar.engine';
           <p class="placeholder-text">{{ placeholderText() }}</p>
         </div>
       }
-      @if (characterName()?.trim() && rpmAvatarUrl()) {
+      @if (characterName().trim() && rpmAvatarUrl()) {
         <p class="name-tag">{{ characterName() }}</p>
       }
     </div>

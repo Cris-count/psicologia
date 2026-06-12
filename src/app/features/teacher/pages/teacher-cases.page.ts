@@ -33,7 +33,11 @@ import { AuthService } from '../../../services/auth.service';
             <span class="game-badge" [class.game-badge-success]="situation.status === 'PUBLISHED'">
               {{ situation.status === 'PUBLISHED' ? 'Habilitado' : 'Borrador' }}
             </span>
-            <span class="case-category">{{ categoryLabel(situation.category) }}</span>
+            @if (!isOwnCase(situation.id)) {
+              <span class="case-category">Catálogo</span>
+            } @else {
+              <span class="case-category">{{ categoryLabel(situation.category) }}</span>
+            }
           </div>
           <h3>{{ situation.title }}</h3>
           <p class="muted">{{ situation.description }}</p>
@@ -44,7 +48,7 @@ import { AuthService } from '../../../services/auth.service';
           </div>
           <div class="case-actions">
             <a class="ghost-button" [routerLink]="['/teacher/casos', situation.id]">Editar</a>
-            @if (canCreate()) {
+            @if (canCreate() && isOwnCase(situation.id)) {
               <button class="ghost-button" type="button" (click)="toggleEnabled(situation.id, situation.status !== 'PUBLISHED')">
                 {{ situation.status === 'PUBLISHED' ? 'Deshabilitar' : 'Habilitar' }}
               </button>
@@ -169,13 +173,18 @@ export class TeacherCasesPage {
 
   readonly cases = computed(() => {
     const teacher = this.auth.currentUser();
-    return teacher ? this.data.situationsByTeacher(teacher.id) : [];
+    return teacher ? this.data.situationsForTeacher(teacher.id) : [];
   });
 
   readonly canCreate = computed(() => {
     const teacher = this.auth.currentUser();
     return teacher ? this.data.canTeacherCreateCases(teacher.id) : false;
   });
+
+  isOwnCase(situationId: string): boolean {
+    const teacher = this.auth.currentUser();
+    return teacher ? this.data.isSituationOwnedByTeacher(situationId, teacher.id) : false;
+  }
 
   categoryLabel(cat: SituationCategory): string {
     const labels: Record<SituationCategory, string> = {

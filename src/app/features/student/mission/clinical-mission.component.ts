@@ -12,7 +12,12 @@ import {
   signal,
 } from '@angular/core';
 import { GroupTask, Question } from '../../../models/academy.models';
+import { IntentoEstudiante } from '../../../models/evaluation.models';
 import { AcademyDataService } from '../../../services/academy-data.service';
+import { EvaluationService } from '../../../services/evaluation.service';
+import { NotificationService } from '../../../services/notification.service';
+import { RubricGradingService } from '../../../services/rubric-grading.service';
+import { SessionService } from '../../../services/session.service';
 import { AuthService } from '../../../services/auth.service';
 import { APP_NAME } from '../../../core/branding.constants';
 import { GuideService } from '../../../shared/guide/services/guide.service';
@@ -28,6 +33,8 @@ import {
   nextUnansweredQuestion,
   zoneLabel,
   zoneProgress,
+  scenarioContextTitle,
+  scenarioContextBody,
 } from './mission.builder';
 import { MissionPhase, MissionZone, ZONE_THEMES } from './mission.types';
 import { PlayerAnimState } from './student-hero.assets';
@@ -38,7 +45,7 @@ import { PlayerAnimState } from './student-hero.assets';
   imports: [CommonModule, MissionGameComponent, GameProgressComponent],
   styleUrl: './clinical-mission.component.css',
   template: `
-    <div class="game-root" [class.game-root--in-scenario]="scenarioPanelOpen()">
+    <div class="game-root" [class.game-root--in-scenario]="scenarioPanelOpen() || phase() === 'scenario-context'">
       <header class="game-hud">
         <div class="game-hud-block">
           <span class="game-hud-tag">{{ appName }}</span>
@@ -75,6 +82,9 @@ import { PlayerAnimState } from './student-hero.assets';
                 <span class="map-objective-hud-dest">Explorando campus</span>
               }
               <span class="map-objective-hud-progress">{{ progressPercent() }}%</span>
+              @if (sessionTimer()) {
+                <span class="map-objective-hud-progress">Tiempo: {{ sessionTimer() }}</span>
+              }
             </div>
           }
 
@@ -103,18 +113,14 @@ import { PlayerAnimState } from './student-hero.assets';
             </div>
           }
 
-          @if (phase() === 'briefing') {
+          @if (phase() === 'intro') {
             <div class="game-overlay cutscene">
-              <div class="cutscene-card">
-                <span class="game-tag">Misión · {{ blueprint().difficulty }}</span>
-                <h2>{{ blueprint().briefingTitle }}</h2>
-                <p>{{ blueprint().briefingContext }}</p>
-                <div class="objective-chip">
-                  <span class="material-symbols-outlined">flag</span>
-                  {{ blueprint().objective }}
-                </div>
+              <div class="cutscene-card case-intro-card">
+                <span class="game-tag">Contexto del caso</span>
+                <h2>{{ blueprint().introTitle }}</h2>
+                <p class="case-intro-body">{{ blueprint().introContext }}</p>
                 <button type="button" class="game-btn primary" (click)="enterWorld()">
-                  Entrar al mapa
+                  Entrar al simulador
                 </button>
               </div>
             </div>
@@ -159,13 +165,56 @@ import { PlayerAnimState } from './student-hero.assets';
             </div>
           }
 
-          @if (phase() === 'mission-complete') {
+          @if (gradingInProgress()) {
+            <div class="game-overlay">
+              <div class="cutscene-card">
+                <h2>Evaluando desempeño</h2>
+                <p>Calificando según la rúbrica del docente…</p>
+              </div>
+            </div>
+          }
+
+          @if (phase() === 'mission-complete' && finalAttempt(); as attempt) {
+            <div class="game-overlay win">
+              <div class="cutscene-card final-result-card">
+                <span class="material-symbols-outlined trophy">emoji_events</span>
+                <h2>Resultado final</h2>
+                <p class="final-case-name">{{ attempt.casoTitulo }}</p>
+                <div class="final-grade">
+                  <span class="final-grade-label">Nota</span>
+                  <strong class="final-grade-value">{{ attempt.notaFinal.toFixed(1) }}</strong>
+                  <span class="final-grade-scale">/ 5.0</span>
+                </div>
+                <dl class="final-stats">
+                  <div><dt>Escenarios</dt><dd>{{ attempt.escenariosCompletados.join(' · ') }}</dd></div>
+                  <div><dt>Preguntas</dt><dd>{{ attempt.totalPreguntas }}</dd></div>
+                  <div><dt>Correctas</dt><dd class="ok">{{ attempt.respuestasCorrectas }}</dd></div>
+                  <div><dt>Incorrectas</dt><dd class="bad">{{ attempt.respuestasIncorrectas }}</dd></div>
+                  <div><dt>Acierto</dt><dd>{{ attempt.porcentaje }}%</dd></div>
+                </dl>
+                <p class="final-feedback">{{ attempt.retroalimentacion }}</p>
+                @if (attempt.evaluacionRubrica?.metodo === 'rubrica' && attempt.evaluacionRubrica?.criterios?.length) {
+                  <dl class="final-stats">
+                    @for (c of attempt.evaluacionRubrica!.criterios!; track c.criterioId) {
+                      <div>
+                        <dt>{{ c.nombre }}</dt>
+                        <dd>{{ c.puntaje.toFixed(1) }} / {{ c.maxPuntaje }} — {{ c.comentario }}</dd>
+                      </div>
+                    }
+                  </dl>
+                }
+                @if (attempt.comentarioDocente) {
+                  <p class="final-feedback">Comentario del docente: {{ attempt.comentarioDocente }}</p>
+                }
+                <button type="button" class="game-btn primary" (click)="abortMission()">Volver al hangar</button>
+              </div>
+            </div>
+          } @else if (phase() === 'mission-complete') {
             <div class="game-overlay win">
               <div class="cutscene-card">
                 <span class="material-symbols-outlined trophy">emoji_events</span>
                 <h2>Misión completada</h2>
-                <p>Has recorrido todas las zonas mentales. GARY registra tu progreso.</p>
-                <app-game-progress [value]="100" [showLabel]="true" />
+                <p>Has recorrido todas las zonas mentales.</p>
                 <button type="button" class="game-btn primary" (click)="abortMission()">Volver al hangar</button>
               </div>
             </div>
@@ -175,27 +224,41 @@ import { PlayerAnimState } from './student-hero.assets';
         @if (scenarioPanelZone(); as zone) {
           <aside
             class="scenario-panel"
-            [class.scenario-panel--open]="scenarioPanelOpen()"
+            [class.scenario-panel--open]="scenarioPanelOpen() || phase() === 'scenario-context'"
             aria-live="polite"
-            [attr.aria-hidden]="!scenarioPanelOpen()"
+            [attr.aria-hidden]="!(scenarioPanelOpen() || phase() === 'scenario-context')"
           >
             <div class="scenario-panel-inner">
               <header class="scenario-panel-head">
                 <span class="case-panel-tag">Escenario activo</span>
                 <span class="scenario-panel-step">{{ zoneProgressFor(zone).done + 1 }}/{{ zoneProgressFor(zone).total || 1 }}</span>
               </header>
-              <h3 class="case-panel-title">{{ zone.scenario.title }}</h3>
-              <p class="case-panel-context">{{ zone.scenario.context }}</p>
+              <h3 class="case-panel-title">{{ scenarioContextTitle(zone) }}</h3>
 
-              @if (panelFeedback(); as fb) {
+              @if (phase() === 'scenario-context') {
+                <p class="case-panel-context case-panel-context--intro">{{ scenarioContextBody(zone) }}</p>
+                <div class="case-context-actions">
+                  <button type="button" class="game-btn primary" (click)="startScenarioQuestions()">
+                    Iniciar preguntas
+                  </button>
+                  <button type="button" class="game-btn ghost" (click)="closeScenarioContext()">
+                    Volver al mapa
+                  </button>
+                </div>
+              } @else if (panelFeedback(); as fb) {
                 <div class="case-inline-feedback" [class.win]="fb.correct" [class.learn]="!fb.correct">
                   <span class="material-symbols-outlined" aria-hidden="true">{{ fb.correct ? 'check_circle' : 'info' }}</span>
                   <p>{{ fb.text }}</p>
                   @if (fb.correct) {
                     <span class="case-inline-next">Siguiente pregunta…</span>
+                  } @else {
+                    <button type="button" class="game-btn ghost case-continue-btn" (click)="continueAfterWrongAnswer()">
+                      Continuar
+                    </button>
                   }
                 </div>
               } @else if (decisionOpen() && currentQuestion(); as question) {
+                <p class="case-panel-context case-panel-context--compact">{{ zone.scenario.instructions }}</p>
                 <div class="case-question">
                   <span class="case-label">Pregunta {{ zoneProgressFor(zone).done + 1 }} de {{ zoneProgressFor(zone).total }}</span>
                   <p>{{ question.statement }}</p>
@@ -244,10 +307,14 @@ export class ClinicalMissionComponent implements OnInit, OnDestroy {
 
   private readonly data = inject(AcademyDataService);
   private readonly auth = inject(AuthService);
+  private readonly evaluation = inject(EvaluationService);
+  private readonly sessions = inject(SessionService);
+  private readonly rubricGrading = inject(RubricGradingService);
+  private readonly notify = inject(NotificationService);
   protected readonly guide = inject(GuideService);
   protected readonly sfx = inject(GameSfxService);
 
-  readonly phase = signal<MissionPhase>('briefing');
+  readonly phase = signal<MissionPhase>('intro');
   readonly activeZoneIndex = signal(-1);
   readonly decisionOpen = signal(false);
   readonly paused = signal(false);
@@ -255,17 +322,21 @@ export class ClinicalMissionComponent implements OnInit, OnDestroy {
   readonly missionResetToken = signal(0);
 
   readonly panelFeedback = signal<{ correct: boolean; text: string } | null>(null);
+  readonly finalAttempt = signal<IntentoEstudiante | null>(null);
+  readonly gradingInProgress = signal(false);
   /** Zona mostrada en el panel lateral; persiste brevemente al cerrar para la transición CSS. */
   readonly scenarioPanelZone = signal<MissionZone | null>(null);
 
   private advanceTimer: ReturnType<typeof setTimeout> | null = null;
   private panelCloseTimer: ReturnType<typeof setTimeout> | null = null;
+  private sessionTimerInterval: ReturnType<typeof setInterval> | null = null;
+  private readonly timerTick = signal(0);
 
   readonly blueprint = computed(() => {
     const task = this.task();
     const situation = this.data.situationForTask(task);
     if (!situation) {
-      return { briefingTitle: 'Misión', briefingContext: '', objective: '', difficulty: '', zones: [] as MissionZone[], totalQuestions: 0 };
+      return { introTitle: 'Misión', introContext: '', objective: '', difficulty: '', zones: [] as MissionZone[], totalQuestions: 0 };
     }
     return buildMissionBlueprint(task, situation, this.data);
   });
@@ -284,6 +355,12 @@ export class ClinicalMissionComponent implements OnInit, OnDestroy {
   });
 
   readonly progressPercent = computed(() => missionProgressPercent(this.blueprint().zones, this.answeredIds()));
+
+  readonly sessionTimer = computed(() => {
+    this.timerTick();
+    return this.sessions.timerLabel(this.sessions.sessionForTask(this.task().id));
+  });
+
   readonly currentZone = computed(() => {
     const idx = this.activeZoneIndex();
     if (idx < 0) return null;
@@ -296,9 +373,9 @@ export class ClinicalMissionComponent implements OnInit, OnDestroy {
 
   readonly controlsEnabled = computed(() => this.phase() === 'map');
 
-  /** Panel de preguntas solo dentro de un escenario activo (Hospital, Comisaría, etc.). */
+  /** Panel lateral: contexto del escenario o preguntas activas. */
   readonly scenarioPanelOpen = computed(
-    () => this.phase() === 'decision' && this.scenarioPanelZone() !== null,
+    () => (this.phase() === 'decision' || this.phase() === 'scenario-context') && this.scenarioPanelZone() !== null,
   );
 
   readonly playerAnim = computed((): PlayerAnimState => {
@@ -321,7 +398,7 @@ export class ClinicalMissionComponent implements OnInit, OnDestroy {
     const activeIdx = this.activeZoneIndex();
     const current = this.currentZone();
     const situation = this.data.situationForTask(this.task());
-    const activePhase = phase === 'decision';
+    const activePhase = phase === 'decision' || phase === 'scenario-context';
 
     const world = situation
       ? buildWorldMap(
@@ -384,12 +461,25 @@ export class ClinicalMissionComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.guide.setMissionActive(true);
-    console.log('Clinical mission component loaded · task:', this.task().id);
+    const resumeWithProgress = this.answeredIds().size > 0;
+    if (resumeWithProgress) {
+      this.phase.set('map');
+      const next = this.nextPlayableZone();
+      const dest = next ? zoneLabel(next) : 'el siguiente escenario';
+      this.guide.show(`Continúa el recorrido. Ve a ${dest} y pulsa E en la puerta.`, 'encourage');
+    } else {
+      this.guide.show('Lee el contexto general del caso y pulsa «Entrar al simulador».', 'thinking');
+    }
+    this.sessionTimerInterval = setInterval(() => this.timerTick.update((n) => n + 1), 30_000);
   }
 
   ngOnDestroy(): void {
     this.clearAdvanceTimer();
     this.clearPanelCloseTimer();
+    if (this.sessionTimerInterval) {
+      clearInterval(this.sessionTimerInterval);
+      this.sessionTimerInterval = null;
+    }
     this.guide.setMissionActive(false);
     this.guide.setCasePanelActive(false);
   }
@@ -400,20 +490,22 @@ export class ClinicalMissionComponent implements OnInit, OnDestroy {
       const panelOpen = this.scenarioPanelOpen();
       this.guide.setCasePanelActive(panelOpen);
 
-      if (phase === 'decision') {
+      if (phase === 'decision' || phase === 'scenario-context') {
         const q = this.currentQuestion();
         const zone = this.currentZone();
-        if (q && zone) this.guide.setQuestionContext(q, zone.scenario);
+        if (q && zone && phase === 'decision') this.guide.setQuestionContext(q, zone.scenario);
       } else if (phase === 'map') {
         this.guide.setContext('student_task');
         this.guide.closeHintBubble();
-      } else if (phase === 'briefing') {
-        this.guide.setContext('student_task', 'Briefing activo. Usa el mapa para recorrer la ciudad.');
+      } else if (phase === 'intro') {
+        this.guide.setContext('student_task', 'Lee el contexto general del caso antes de entrar al mapa.');
       }
     });
   }
 
   protected zoneLabel = zoneLabel;
+  protected scenarioContextTitle = scenarioContextTitle;
+  protected scenarioContextBody = scenarioContextBody;
 
   protected zoneProgressFor(zone: MissionZone) {
     return zoneProgress(zone, this.answeredIds());
@@ -428,6 +520,15 @@ export class ClinicalMissionComponent implements OnInit, OnDestroy {
   }
 
   enterWorld(): void {
+    const student = this.auth.currentUser();
+    const task = this.task();
+    if (student) {
+      const access = this.sessions.canStudentAccessTask(student.id, task.id);
+      if (!access.allowed) {
+        this.guide.show(access.reason ?? 'No puedes entrar al simulador.', 'encourage');
+        return;
+      }
+    }
     this.sfx.playClick();
     this.activeZoneIndex.set(-1);
     this.scenarioPanelZone.set(null);
@@ -452,9 +553,28 @@ export class ClinicalMissionComponent implements OnInit, OnDestroy {
     this.panelFeedback.set(null);
     this.lastFeedback.set(null);
     this.guide.closeHintBubble();
+    this.decisionOpen.set(false);
+    this.phase.set('scenario-context');
+    this.guide.show(`Lee el contexto de ${zone.scenario.title} y pulsa «Iniciar preguntas».`, 'thinking');
+  }
+
+  startScenarioQuestions(): void {
+    this.sfx.playClick();
+    this.panelFeedback.set(null);
     this.decisionOpen.set(true);
     this.phase.set('decision');
-    this.guide.show(`Escenario: ${zone.scenario.title}. Responde las preguntas del panel.`, 'thinking');
+    const zone = this.currentZone();
+    const q = this.currentQuestion();
+    if (q && zone) this.guide.setQuestionContext(q, zone.scenario);
+    this.guide.show('Responde las preguntas del panel. No necesitas pulsar E.', 'encourage');
+  }
+
+  closeScenarioContext(): void {
+    this.sfx.playClick();
+    this.schedulePanelDismiss(() => {
+      this.activeZoneIndex.set(-1);
+      this.returnToMap();
+    });
   }
 
   isZoneOpen(index: number): boolean {
@@ -500,10 +620,26 @@ export class ClinicalMissionComponent implements OnInit, OnDestroy {
     }
 
     this.sfx.playError();
-    this.guide.show('Otra ruta posible — revisa la retroalimentación.', 'encourage');
-    this.lastFeedback.set({ correct: false, text: question.feedback });
+    this.guide.show('Respuesta registrada. Revisa la retroalimentación y continúa.', 'encourage');
+    this.panelFeedback.set({ correct: false, text: question.feedback });
     this.decisionOpen.set(false);
-    this.phase.set('feedback');
+  }
+
+  continueAfterWrongAnswer(): void {
+    this.sfx.playClick();
+    this.panelFeedback.set(null);
+    const zone = this.currentZone();
+    if (!zone) {
+      this.returnToMap();
+      return;
+    }
+    const next = nextUnansweredQuestion(zone, this.answeredIds());
+    if (next) {
+      this.decisionOpen.set(true);
+      this.phase.set('decision');
+      return;
+    }
+    this.completeCurrentZone();
   }
 
   continueAfterFeedback(): void {
@@ -529,10 +665,12 @@ export class ClinicalMissionComponent implements OnInit, OnDestroy {
     this.returnToMap();
 
     if (this.progressPercent() >= 100) {
-      this.schedulePanelDismiss(() => {
-        this.activeZoneIndex.set(-1);
-        this.phase.set('mission-complete');
-        this.guide.show('¡Misión completada!', 'happy');
+      void this.finalizeMissionAttempt().then(() => {
+        this.schedulePanelDismiss(() => {
+          this.activeZoneIndex.set(-1);
+          this.phase.set('mission-complete');
+          this.guide.show('¡Misión completada! Revisa tu nota final.', 'happy');
+        });
       });
       return;
     }
@@ -547,6 +685,31 @@ export class ClinicalMissionComponent implements OnInit, OnDestroy {
         'happy',
       );
     }
+  }
+
+  private async finalizeMissionAttempt(): Promise<void> {
+    const student = this.auth.currentUser();
+    const task = this.task();
+    const situation = this.data.situationForTask(task);
+    if (!student || !situation) return;
+
+    this.gradingInProgress.set(true);
+    const answers = this.data.answersForStudentTask(student.id, task);
+    let intento = this.evaluation.construirIntento({
+      studentId: student.id,
+      studentName: student.name,
+      task,
+      casoId: situation.id,
+      casoTitulo: situation.title,
+      zones: this.blueprint().zones,
+      answers,
+      data: this.data,
+    });
+    intento = await this.rubricGrading.applyRubricGrade(intento, situation);
+    this.gradingInProgress.set(false);
+    this.data.saveStudentAttempt(intento);
+    this.finalAttempt.set(intento);
+    void this.notify.notifyResultsReady(student.email, intento.casoTitulo, intento.notaFinal);
   }
 
   private schedulePanelDismiss(after?: () => void): void {
@@ -601,20 +764,26 @@ export class ClinicalMissionComponent implements OnInit, OnDestroy {
     const task = this.task();
     if (!student) return;
 
+    if (!this.sessions.canStudentRetry(student.id, task.id)) {
+      this.guide.show('El docente no autorizó reintentos para esta misión.', 'encourage');
+      return;
+    }
+
     this.clearAdvanceTimer();
     this.clearPanelCloseTimer();
     this.data.resetStudentTaskProgress(student.id, task.id);
-    this.phase.set('briefing');
+    this.phase.set('intro');
     this.activeZoneIndex.set(-1);
     this.scenarioPanelZone.set(null);
     this.decisionOpen.set(false);
     this.paused.set(false);
     this.panelFeedback.set(null);
     this.lastFeedback.set(null);
+    this.finalAttempt.set(null);
     this.guide.closeHintBubble();
     this.guide.setMissionActive(true);
     this.missionResetToken.update((n) => n + 1);
-    this.guide.show('Simulador reiniciado. Pulsa «Entrar al mapa» para empezar de nuevo.', 'encourage');
+    this.guide.show('Simulador reiniciado. Lee el contexto del caso y pulsa «Entrar al simulador».', 'encourage');
     this.sfx.playClick();
   }
 }

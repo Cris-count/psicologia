@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { GroupTask } from '../../../models/academy.models';
 import { AcademyDataService } from '../../../services/academy-data.service';
 import { AuthService } from '../../../services/auth.service';
+import { SessionService } from '../../../services/session.service';
 import { GuideService } from '../../../shared/guide/services/guide.service';
 import { ClinicalMissionComponent } from '../mission/clinical-mission.component';
 
@@ -12,7 +13,19 @@ import { ClinicalMissionComponent } from '../mission/clinical-mission.component'
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, ClinicalMissionComponent],
   template: `
-    @if (task; as activeTask) {
+    @if (accessBlocked) {
+      <article class="panel">
+        <h2>Acceso al simulador</h2>
+        <p>{{ accessReason }}</p>
+        <button type="button" class="ghost-button" (click)="exitMission()">Volver al hangar</button>
+      </article>
+    } @else if (retryBlocked) {
+      <article class="panel">
+        <h2>Intento no disponible</h2>
+        <p>Ya completaste esta misión. El docente debe autorizar reintentos (REQ-12).</p>
+        <button type="button" class="ghost-button" (click)="exitMission()">Volver al hangar</button>
+      </article>
+    } @else if (task; as activeTask) {
       <app-clinical-mission
         [task]="activeTask"
         [groupName]="groupName"
@@ -26,11 +39,15 @@ export class StudentMissionPage implements OnInit {
   private readonly router = inject(Router);
   private readonly data = inject(AcademyDataService);
   private readonly auth = inject(AuthService);
+  private readonly sessions = inject(SessionService);
   private readonly guide = inject(GuideService);
 
   task?: GroupTask;
   groupId = '';
   groupName = 'Mision';
+  accessBlocked = false;
+  accessReason = '';
+  retryBlocked = false;
 
   ngOnInit(): void {
     if (!this.auth.ensureAuthenticatedOrRedirect()) {
@@ -44,8 +61,20 @@ export class StudentMissionPage implements OnInit {
     this.task = group ? this.data.tasksForStudentInGroup(user!.id, group.id).find((item) => item.id === taskId) : undefined;
     this.groupName = group?.name ?? 'Mision';
 
-    if (!this.task) {
+    if (!this.task || !user) {
       void this.router.navigate(['/student'], { queryParams: this.groupId ? { groupId: this.groupId } : undefined });
+      return;
+    }
+
+    const access = this.sessions.canStudentAccessTask(user.id, this.task.id);
+    if (!access.allowed) {
+      this.accessBlocked = true;
+      this.accessReason = access.reason ?? 'No puedes ingresar al simulador en este momento.';
+      return;
+    }
+
+    if (!this.sessions.canStudentRetry(user.id, this.task.id) && this.data.progressFor(user.id, this.task.id).completed) {
+      this.retryBlocked = true;
       return;
     }
 

@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { User } from '../../../models/academy.models';
 import { AcademyDataService } from '../../../services/academy-data.service';
 import { AuthService } from '../../../services/auth.service';
+import { NotificationService } from '../../../services/notification.service';
 
 type StudentRow = {
   student: User;
@@ -39,11 +40,11 @@ const ASSIGN_STUDENT_LIMIT = 40;
         <h3>{{ editingStudentId() ? 'Editar estudiante' : 'Crear estudiante' }}</h3>
         <form class="stack-form" (ngSubmit)="saveStudent()">
           <label>Nombre <input [(ngModel)]="studentName" name="studentName" required /></label>
-          <label>Correo <input type="email" [(ngModel)]="studentEmail" name="studentEmail" required /></label>
+          <label>Correo universitario <input type="email" [(ngModel)]="studentEmail" name="studentEmail" required /></label>
+          <label>Tarjeta de identidad <input [(ngModel)]="studentCodeInput" name="studentCode" required /></label>
           @if (!editingStudentId()) {
-            <label>Contraseña <input [(ngModel)]="studentPassword" name="studentPassword" required /></label>
+            <p class="muted form-hint">Ingresará con correo + tarjeta de identidad (sin contraseña).</p>
           }
-          <label>Identificador / Código <input [(ngModel)]="studentCodeInput" name="studentCode" /></label>
           <div class="button-row">
             <button class="primary-button" type="submit">{{ editingStudentId() ? 'Guardar cambios' : 'Crear estudiante' }}</button>
             @if (editingStudentId()) {
@@ -195,6 +196,7 @@ const ASSIGN_STUDENT_LIMIT = 40;
 export class TeacherStudentsPage {
   private readonly data = inject(AcademyDataService);
   private readonly auth = inject(AuthService);
+  private readonly notify = inject(NotificationService);
 
   readonly message = signal('');
   readonly editingStudentId = signal<string | null>(null);
@@ -309,7 +311,10 @@ export class TeacherStudentsPage {
   }
 
   saveStudent(): void {
-    if (!this.studentName.trim() || !this.studentEmail.trim()) return;
+    if (!this.studentName.trim() || !this.studentEmail.trim() || !this.studentCodeInput.trim()) {
+      this.message.set('Nombre, correo y tarjeta de identidad son obligatorios.');
+      return;
+    }
 
     if (this.editingStudentId()) {
       this.data.updateStudent(this.editingStudentId()!, this.studentName, this.studentEmail, this.studentCodeInput);
@@ -318,8 +323,12 @@ export class TeacherStudentsPage {
       return;
     }
 
-    if (!this.studentPassword.trim()) return;
-    const created = this.data.createStudent(this.studentName, this.studentEmail, this.studentPassword, this.studentCodeInput);
+    const created = this.data.createStudent(
+      this.studentName,
+      this.studentEmail,
+      this.data.generateAuthCode(),
+      this.studentCodeInput,
+    );
     this.assignStudentId = created.id;
     this.studentName = '';
     this.studentEmail = '';
@@ -344,10 +353,20 @@ export class TeacherStudentsPage {
   }
 
   assignToGroup(): void {
-    if (this.assignGroupId && this.assignStudentId) {
-      this.data.addStudentToGroup(this.assignGroupId, this.assignStudentId);
-      this.message.set('Estudiante asignado al grupo.');
+    if (!this.assignGroupId || !this.assignStudentId) return;
+    const student = this.data.store().users.find((u) => u.id === this.assignStudentId);
+    const group = this.groups().find((g) => g.id === this.assignGroupId);
+    const teacher = this.auth.currentUser();
+    this.data.addStudentToGroup(this.assignGroupId, this.assignStudentId);
+    if (student && group) {
+      void this.notify.notifyStudentAddedToGroup(
+        student.email,
+        group.name,
+        this.data.documentIdForStudent(student.id),
+        teacher?.name,
+      );
     }
+    this.message.set('Estudiante asignado al grupo. Verá la notificación al ingresar.');
   }
 
   deactivateStudent(userId: string): void {

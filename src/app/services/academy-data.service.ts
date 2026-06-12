@@ -27,14 +27,21 @@ import {
   SituationDraft,
   ScenarioDraft,
   TaskDraft,
+  ScheduleTaskResult,
   User,
 } from '../models/academy.models';
+import { GLOBAL_RUBRIC_ID, IntentoEstudiante, RubricaEvaluacion } from '../models/evaluation.models';
+import { NotificationRecord, NotificationType, SessionAuthorization, TaskSession, TaskSessionStatus } from '../models/session.models';
 import { normalizeAccessories } from '../shared/guide/data/accessory.catalog';
 import { normalizeAppearance } from '../shared/guide/data/appearance.catalog';
 import { migrateLegacyLook, normalizeAvatarLook } from '../shared/guide/data/avatar-studio.catalog';
+import {
+  DEMO_CASE_INTRO,
+  DEMO_SCENARIO_CONTEXT,
+} from '../features/student/mission/mission-case-content';
 import type { AvatarLook } from '../shared/guide/data/avatar-look.types';
 
-const STORE_KEY = 'academic-case-simulator-store-v5';
+const STORE_KEY = 'academic-case-simulator-store-v8';
 const STORE_API_URL = '/api/store';
 
 /** Credenciales demo: reinicio del simulador estudiante. */
@@ -51,7 +58,10 @@ export class AcademyDataService {
   readonly ready: Promise<void>;
 
   constructor() {
-    this.ready = this.loadDockerStore().finally(() => this.readyState.set(true));
+    this.ready = this.loadDockerStore().finally(() => {
+      this.processExpiredSessions();
+      this.readyState.set(true);
+    });
   }
 
   get users(): User[] {
@@ -63,6 +73,40 @@ export class AcademyDataService {
     return this.users.find(
       (user) => user.email.toLowerCase() === normalizedEmail && user.password === password && user.status === 'ACTIVE',
     );
+  }
+
+  userByEmail(email: string): User | undefined {
+    const normalizedEmail = email.trim().toLowerCase();
+    return this.store().users.find((u) => u.email.toLowerCase() === normalizedEmail && u.status === 'ACTIVE');
+  }
+
+  /** REQ-07 — estudiante: correo universitario + tarjeta de identidad. */
+  authenticateStudentWithDocument(email: string, documentId: string): User | undefined {
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedDoc = this.normalizeDocumentId(documentId);
+    if (!normalizedDoc) return undefined;
+
+    const user = this.store().users.find(
+      (u) => u.email.toLowerCase() === normalizedEmail && u.role === 'STUDENT' && u.status === 'ACTIVE',
+    );
+    if (!user) return undefined;
+
+    const profile = this.studentProfileFor(user.id);
+    if (!profile || this.normalizeDocumentId(profile.code) !== normalizedDoc) {
+      return undefined;
+    }
+    return user;
+  }
+
+  normalizeDocumentId(value: string): string {
+    return String(value ?? '')
+      .trim()
+      .replace(/[\s.\-]/g, '')
+      .toLowerCase();
+  }
+
+  documentIdForStudent(studentId: string): string {
+    return this.studentProfileFor(studentId)?.code ?? '';
   }
 
   groupsByTeacher(teacherId: string): GameGroup[] {
@@ -195,19 +239,35 @@ export class AcademyDataService {
 
   /** Casos publicados disponibles para un maestro (propios + catálogo global). */
   catalogSituationsForTeacher(teacherId: string): Situation[] {
-    const userIds = new Set(this.store().users.map((u) => u.id));
-    return this.store().situations.filter((situation) => {
-      if (situation.status !== 'PUBLISHED') return false;
-      if (situation.createdById === teacherId) return true;
-      const creator = this.store().users.find((u) => u.id === situation.createdById);
-      return creator?.role === 'SUPERADMIN';
-    });
+    return this.store()
+      .situations.filter(
+        (situation) => situation.status === 'PUBLISHED' && this.isSituationAccessibleToTeacher(situation, teacherId),
+      )
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+
+  /** Casos visibles en el módulo docente: propios + catálogo de plataforma (superadmin). */
+  situationsForTeacher(teacherId: string): Situation[] {
+    return this.store()
+      .situations.filter((situation) => this.isSituationAccessibleToTeacher(situation, teacherId))
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }
 
   situationsByTeacher(teacherId: string): Situation[] {
     return this.store()
       .situations.filter((s) => s.createdById === teacherId)
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+
+  isSituationOwnedByTeacher(situationId: string, teacherId: string): boolean {
+    const situation = this.getSituation(situationId);
+    return situation?.createdById === teacherId;
+  }
+
+  private isSituationAccessibleToTeacher(situation: Situation, teacherId: string): boolean {
+    if (situation.createdById === teacherId) return true;
+    const creator = this.store().users.find((u) => u.id === situation.createdById);
+    return creator?.role === 'SUPERADMIN';
   }
 
   canTeacherCreateCases(teacherId: string): boolean {
@@ -233,6 +293,8 @@ export class AcademyDataService {
       createdById: teacherId,
       resources: draft.resources?.trim() ?? '',
       mapEnvironment: draft.mapEnvironment,
+      generalContextTitle: draft.generalContextTitle?.trim(),
+      generalContextBody: draft.generalContextBody?.trim(),
       createdAt: now,
       updatedAt: now,
     };
@@ -253,6 +315,8 @@ export class AcademyDataService {
               context: draft.context?.trim() ?? s.context,
               learningObjective: draft.learningObjective?.trim() ?? s.learningObjective,
               resources: draft.resources?.trim() ?? s.resources,
+              generalContextTitle: draft.generalContextTitle?.trim() ?? s.generalContextTitle,
+              generalContextBody: draft.generalContextBody?.trim() ?? s.generalContextBody,
               updatedAt: new Date().toISOString(),
             }
           : s,
@@ -330,7 +394,7 @@ export class AcademyDataService {
   }
 
   teacherStats(teacherId: string) {
-    const cases = this.situationsByTeacher(teacherId);
+    const cases = this.situationsForTeacher(teacherId);
     const groups = this.groupsByTeacher(teacherId);
     const students = this.studentsByTeacher(teacherId);
     const groupIds = new Set(groups.map((g) => g.id));
@@ -391,7 +455,11 @@ export class AcademyDataService {
     });
   }
 
-  createStudent(name: string, email: string, password: string, code: string): User {
+  createStudent(name: string, email: string, password: string, documentId: string): User {
+    const doc = documentId.trim();
+    if (!doc) {
+      throw new Error('La tarjeta de identidad es obligatoria.');
+    }
     const now = new Date().toISOString();
     const user: User = {
       id: this.id('usr'),
@@ -410,7 +478,7 @@ export class AcademyDataService {
         {
           id: this.id('spr'),
           userId: user.id,
-          code: code.trim() || `EST-${Date.now()}`,
+          code: doc,
           nickname: '',
           avatarId: DEFAULT_AVATAR_ID,
           onboardingCompleted: false,
@@ -581,11 +649,21 @@ export class AcademyDataService {
     });
   }
 
-  /** El maestro vincula situacion, escenarios y preguntas mediante checklist. */
-  assignTaskToGroup(draft: TaskDraft): GroupTask | undefined {
+  /** El maestro agenda simulación: valida tiempos, autorizados y credenciales (REQ-04). */
+  scheduleTaskToGroup(draft: TaskDraft): ScheduleTaskResult {
+    const maxDuration = draft.maxDurationMinutes ?? 120;
+    const estimated = draft.estimatedMinutes ?? 90;
+    if (maxDuration > estimated) {
+      return {
+        ok: false,
+        error:
+          'El tiempo máximo no puede superar el tiempo estimado del caso. Ajusta los minutos para que sean coherentes.',
+      };
+    }
+
     const situation = this.store().situations.find((item) => item.id === draft.situationId);
     if (!situation || situation.status !== 'PUBLISHED') {
-      return undefined;
+      return { ok: false, error: 'El caso debe estar publicado y habilitado para agendar.' };
     }
 
     const scenarioIds = [...new Set(draft.scenarioIds)].filter((id) => {
@@ -594,15 +672,56 @@ export class AcademyDataService {
     });
     const questionIds = [...new Set(draft.questionIds)].filter((id) => {
       const question = this.store().questions.find((item) => item.id === id);
-      if (!question) {
-        return false;
-      }
+      if (!question) return false;
       const scenario = this.store().scenarios.find((item) => item.id === question.scenarioId);
       return scenario?.situationId === draft.situationId && scenarioIds.includes(question.scenarioId);
     });
 
     if (!scenarioIds.length || !questionIds.length) {
-      return undefined;
+      return { ok: false, error: 'Selecciona al menos un escenario y una pregunta.' };
+    }
+
+    const group = this.store().groups.find((g) => g.id === draft.groupId);
+    if (!group) {
+      return { ok: false, error: 'Grupo no encontrado.' };
+    }
+
+    const authorizedIds = new Set<string>();
+
+    for (const invitee of draft.invitees ?? []) {
+      const email = invitee.email.trim().toLowerCase();
+      const name = invitee.name.trim();
+      if (!email || !name) continue;
+      const documentId = invitee.documentId?.trim() ?? '';
+      if (!documentId) continue;
+      let user = this.store().users.find((u) => u.email.toLowerCase() === email && u.role === 'STUDENT');
+      if (!user) {
+        user = this.createStudent(name, email, this.generateAuthCode(), documentId);
+      } else {
+        this.updateStudent(user.id, name, email, documentId);
+      }
+      if (!this.store().groupStudents.some((m) => m.groupId === draft.groupId && m.studentId === user!.id)) {
+        this.addStudentToGroup(draft.groupId, user.id);
+      }
+      authorizedIds.add(user.id);
+    }
+
+    for (const studentId of draft.authorizedStudentIds ?? []) {
+      authorizedIds.add(studentId);
+      if (!this.store().groupStudents.some((m) => m.groupId === draft.groupId && m.studentId === studentId)) {
+        this.addStudentToGroup(draft.groupId, studentId);
+      }
+    }
+
+    if (!authorizedIds.size) {
+      return { ok: false, error: 'Selecciona o registra al menos un estudiante autorizado.' };
+    }
+
+    const now = new Date();
+    const startAt = draft.scheduledStartAt ?? now.toISOString();
+    const endAt = draft.scheduledEndAt ?? new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    if (new Date(endAt).getTime() <= new Date(startAt).getTime()) {
+      return { ok: false, error: 'La fecha de fin debe ser posterior al inicio.' };
     }
 
     const task: GroupTask = {
@@ -613,8 +732,50 @@ export class AcademyDataService {
       questionIds,
       assignedAt: new Date().toISOString(),
     };
-    this.commit({ ...this.store(), groupTasks: [task, ...this.store().groupTasks] });
-    return task;
+
+    const session: TaskSession = {
+      id: this.id('ses'),
+      taskId: task.id,
+      groupId: task.groupId,
+      situationId: task.situationId,
+      teacherId: group.teacherId,
+      academicSpace: draft.academicSpace?.trim() || group.name,
+      location: draft.location?.trim() || 'Campus virtual MIND-SPHERE',
+      scheduledStartAt: startAt,
+      scheduledEndAt: endAt,
+      maxDurationMinutes: maxDuration,
+      estimatedMinutes: estimated,
+      customMessage: draft.customMessage?.trim() || undefined,
+      authorizedStudentIds: [...authorizedIds],
+      status: 'NOT_STARTED',
+      allowRetries: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const authorizations: SessionAuthorization[] = [...authorizedIds].map((studentId) => ({
+      id: this.id('sau'),
+      sessionId: session.id,
+      taskId: task.id,
+      studentId,
+      authCode: this.generateAuthCode(),
+      createdAt: new Date().toISOString(),
+    }));
+
+    this.commit({
+      ...this.store(),
+      groupTasks: [task, ...this.store().groupTasks],
+      taskSessions: [session, ...(this.store().taskSessions ?? [])],
+      sessionAuthorizations: [...authorizations, ...(this.store().sessionAuthorizations ?? [])],
+    });
+
+    return { ok: true, task, session, authorizations };
+  }
+
+  /** @deprecated Use scheduleTaskToGroup */
+  assignTaskToGroup(draft: TaskDraft): GroupTask | undefined {
+    const result = this.scheduleTaskToGroup(draft);
+    return result.ok ? result.task : undefined;
   }
 
   tasksForGroup(groupId: string): GroupTask[] {
@@ -654,7 +815,57 @@ export class AcademyDataService {
     const belongsToGroup = this.store().groupStudents.some(
       (membership) => membership.groupId === groupId && membership.studentId === studentId,
     );
-    return belongsToGroup ? this.tasksForGroup(groupId) : [];
+    if (!belongsToGroup) return [];
+    return this.tasksForGroup(groupId).filter((task) => {
+      const session = this.sessionForTask(task.id);
+      if (!session?.authorizedStudentIds?.length) return true;
+      return session.authorizedStudentIds.includes(studentId);
+    });
+  }
+
+  authorizationForStudentTask(studentId: string, taskId: string): SessionAuthorization | undefined {
+    return (this.store().sessionAuthorizations ?? []).find(
+      (a) => a.studentId === studentId && a.taskId === taskId && !a.blockedAt,
+    );
+  }
+
+  findAuthorizationByEmailAndCode(email: string, code: string): SessionAuthorization | undefined {
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedCode = code.trim().toUpperCase();
+    const user = this.store().users.find(
+      (u) => u.email.toLowerCase() === normalizedEmail && u.role === 'STUDENT' && u.status === 'ACTIVE',
+    );
+    if (!user) return undefined;
+    return (this.store().sessionAuthorizations ?? []).find(
+      (a) => a.studentId === user.id && a.authCode.toUpperCase() === normalizedCode,
+    );
+  }
+
+  permanentlyBlockStudentAccess(studentId: string, taskId: string): void {
+    const now = new Date().toISOString();
+    const sessionAuthorizations = (this.store().sessionAuthorizations ?? []).map((a) =>
+      a.studentId === studentId && a.taskId === taskId ? { ...a, blockedAt: now } : a,
+    );
+    this.commit({ ...this.store(), sessionAuthorizations });
+  }
+
+  isStudentBlockedForTask(studentId: string, taskId: string): boolean {
+    return (this.store().sessionAuthorizations ?? []).some(
+      (a) => a.studentId === studentId && a.taskId === taskId && Boolean(a.blockedAt),
+    );
+  }
+
+  userById(userId: string): User | undefined {
+    return this.store().users.find((u) => u.id === userId);
+  }
+
+  generateAuthCode(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let suffix = '';
+    for (let i = 0; i < 8; i += 1) {
+      suffix += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return `MS-${suffix}`;
   }
 
   groupsForStudent(studentId: string): GameGroup[] {
@@ -729,7 +940,10 @@ export class AcademyDataService {
     const studentProgress = this.store().studentProgress.filter(
       (p) => !(p.studentId === studentId && p.taskId === taskId),
     );
-    this.commit({ ...this.store(), studentAnswers, studentProgress });
+    const intentosEstudiante = (this.store().intentosEstudiante ?? []).filter(
+      (i) => !(i.studentId === studentId && i.taskId === taskId),
+    );
+    this.commit({ ...this.store(), studentAnswers, studentProgress, intentosEstudiante });
   }
 
   /** Reinicia la misión demo del estudiante (Caso 1 · campus). */
@@ -750,6 +964,262 @@ export class AcademyDataService {
     );
   }
 
+  globalRubric(): RubricaEvaluacion | undefined {
+    return (this.store().rubricas ?? []).find((r) => r.id === GLOBAL_RUBRIC_ID);
+  }
+
+  saveGlobalRubric(rubric: RubricaEvaluacion): void {
+    const rest = (this.store().rubricas ?? []).filter((r) => r.id !== GLOBAL_RUBRIC_ID);
+    this.commit({ ...this.store(), rubricas: [rubric, ...rest] });
+  }
+
+  deleteGlobalRubric(): void {
+    const rubricas = (this.store().rubricas ?? []).filter((r) => r.id !== GLOBAL_RUBRIC_ID);
+    this.commit({ ...this.store(), rubricas });
+  }
+
+  saveStudentAttempt(intento: IntentoEstudiante): void {
+    const rest = (this.store().intentosEstudiante ?? []).filter(
+      (i) => !(i.studentId === intento.studentId && i.taskId === intento.taskId),
+    );
+    const progress = this.progressFor(intento.studentId, intento.taskId);
+    const updatedProgress: StudentProgress = {
+      ...progress,
+      completed: true,
+      progressPercentage: 100,
+      notaFinal: intento.notaFinal,
+      respuestasCorrectas: intento.respuestasCorrectas,
+      respuestasIncorrectas: intento.respuestasIncorrectas,
+      porcentajeAcierto: intento.porcentaje,
+      intentoId: intento.id,
+      completedAt: intento.fechaFinalizacion,
+      updatedAt: intento.fechaFinalizacion,
+    };
+    this.commit({
+      ...this.store(),
+      intentosEstudiante: [intento, ...rest],
+      studentProgress: [
+        updatedProgress,
+        ...this.store().studentProgress.filter(
+          (p) => !(p.studentId === intento.studentId && p.taskId === intento.taskId),
+        ),
+      ],
+    });
+  }
+
+  attemptForStudentTask(studentId: string, taskId: string): IntentoEstudiante | undefined {
+    return (this.store().intentosEstudiante ?? []).find(
+      (i) => i.studentId === studentId && i.taskId === taskId,
+    );
+  }
+
+  answersForStudentTask(studentId: string, task: GroupTask): StudentAnswer[] {
+    const questionIds = new Set(task.questionIds);
+    return this.store().studentAnswers.filter(
+      (a) => a.studentId === studentId && questionIds.has(a.questionId),
+    );
+  }
+
+  sessionForTask(taskId: string): TaskSession | undefined {
+    return (this.store().taskSessions ?? []).find((s) => s.taskId === taskId);
+  }
+
+  upsertTaskSession(session: TaskSession): void {
+    const rest = (this.store().taskSessions ?? []).filter((s) => s.taskId !== session.taskId);
+    this.commit({ ...this.store(), taskSessions: [session, ...rest] });
+  }
+
+  startTaskSession(taskId: string): TaskSession | undefined {
+    const session = this.sessionForTask(taskId);
+    if (!session || session.status === 'FINISHED') return undefined;
+    const now = new Date().toISOString();
+    const updated: TaskSession = {
+      ...session,
+      status: 'IN_PROGRESS',
+      startedAt: session.startedAt ?? now,
+      updatedAt: now,
+    };
+    this.upsertTaskSession(updated);
+    return updated;
+  }
+
+  finishTaskSession(taskId: string): TaskSession | undefined {
+    const session = this.sessionForTask(taskId);
+    if (!session) return undefined;
+    const now = new Date().toISOString();
+    const updated: TaskSession = { ...session, status: 'FINISHED', finishedAt: now, updatedAt: now };
+    this.upsertTaskSession(updated);
+    this.processPartialGradesForTask(taskId);
+    return updated;
+  }
+
+  updateTaskSession(
+    taskId: string,
+    patch: Partial<
+      Pick<
+        TaskSession,
+        | 'scheduledStartAt'
+        | 'scheduledEndAt'
+        | 'maxDurationMinutes'
+        | 'estimatedMinutes'
+        | 'customMessage'
+        | 'allowRetries'
+      >
+    >,
+  ): TaskSession | undefined {
+    const session = this.sessionForTask(taskId);
+    if (!session) return undefined;
+    const updated: TaskSession = { ...session, ...patch, updatedAt: new Date().toISOString() };
+    this.upsertTaskSession(updated);
+    return updated;
+  }
+
+  setAttemptTeacherFeedback(intentoId: string, teacherId: string, comment: string): boolean {
+    const intentos = this.store().intentosEstudiante ?? [];
+    const idx = intentos.findIndex((i) => i.id === intentoId);
+    if (idx < 0) return false;
+    const now = new Date().toISOString();
+    const updated = [...intentos];
+    updated[idx] = {
+      ...updated[idx],
+      comentarioDocente: comment.trim(),
+      comentarioDocenteAt: now,
+    };
+    this.commit({ ...this.store(), intentosEstudiante: updated });
+    return true;
+  }
+
+  queueNotification(params: {
+    type: NotificationType;
+    recipientEmail: string;
+    subject: string;
+    body: string;
+  }): NotificationRecord {
+    const record: NotificationRecord = {
+      id: this.id('ntf'),
+      type: params.type,
+      recipientEmail: params.recipientEmail,
+      subject: params.subject,
+      body: params.body,
+      status: 'PENDING',
+      createdAt: new Date().toISOString(),
+    };
+    this.commit({
+      ...this.store(),
+      notifications: [record, ...(this.store().notifications ?? [])],
+    });
+    return record;
+  }
+
+  notificationsForEmail(email: string): NotificationRecord[] {
+    const normalized = email.trim().toLowerCase();
+    return (this.store().notifications ?? [])
+      .filter((n) => n.recipientEmail.toLowerCase() === normalized)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  unreadNotificationCount(email: string): number {
+    return this.notificationsForEmail(email).filter((n) => !n.readAt).length;
+  }
+
+  markNotificationSent(id: string, sentAt?: string): void {
+    const notifications = (this.store().notifications ?? []).map((n) =>
+      n.id === id
+        ? { ...n, status: 'SENT' as const, sentAt: sentAt ?? new Date().toISOString(), deliveryError: undefined }
+        : n,
+    );
+    this.commit({ ...this.store(), notifications });
+  }
+
+  markNotificationFailed(id: string, deliveryError: string): void {
+    const notifications = (this.store().notifications ?? []).map((n) =>
+      n.id === id ? { ...n, status: 'FAILED' as const, deliveryError } : n,
+    );
+    this.commit({ ...this.store(), notifications });
+  }
+
+  markNotificationRead(id: string): void {
+    const notifications = (this.store().notifications ?? []).map((n) =>
+      n.id === id && !n.readAt ? { ...n, readAt: new Date().toISOString() } : n,
+    );
+    this.commit({ ...this.store(), notifications });
+  }
+
+  /** REQ-14 — finaliza sesiones cuya fecha límite pasó hace más de 24 h. */
+  processExpiredSessions(): number {
+    const now = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
+    let closed = 0;
+    const sessions = (this.store().taskSessions ?? []).map((session) => {
+      if (session.status === 'FINISHED') return session;
+      const end = new Date(session.scheduledEndAt).getTime();
+      if (now > end + dayMs) {
+        closed++;
+        return {
+          ...session,
+          status: 'FINISHED' as TaskSessionStatus,
+          finishedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      return session;
+    });
+    if (closed) {
+      this.commit({ ...this.store(), taskSessions: sessions });
+    }
+    return closed;
+  }
+
+  /** REQ-10 — nota proporcional al avance si la sesión cierra sin completar. */
+  private processPartialGradesForTask(taskId: string): void {
+    const task = this.taskById(taskId);
+    if (!task) return;
+    const studentIds = this.store()
+      .groupStudents.filter((m) => m.groupId === task.groupId)
+      .map((m) => m.studentId);
+    for (const studentId of studentIds) {
+      const progress = this.progressFor(studentId, taskId);
+      if (progress.completed || progress.notaFinal != null) continue;
+      const answers = this.answersForStudentTask(studentId, task);
+      if (!answers.length) {
+        this.commit({
+          ...this.store(),
+          studentProgress: [
+            {
+              ...progress,
+              notaFinal: 1,
+              progressPercentage: 0,
+              updatedAt: new Date().toISOString(),
+            },
+            ...this.store().studentProgress.filter(
+              (p) => !(p.studentId === studentId && p.taskId === taskId),
+            ),
+          ],
+        });
+        continue;
+      }
+      const correct = answers.filter((a) => a.isCorrect).length;
+      const total = task.questionIds.length;
+      const nota = total ? Math.round((1 + (correct / total) * 4) * 10) / 10 : 1;
+      this.commit({
+        ...this.store(),
+        studentProgress: [
+          {
+            ...progress,
+            notaFinal: nota,
+            respuestasCorrectas: correct,
+            respuestasIncorrectas: answers.length - correct,
+            porcentajeAcierto: total ? Math.round((correct / total) * 100) : 0,
+            updatedAt: new Date().toISOString(),
+          },
+          ...this.store().studentProgress.filter(
+            (p) => !(p.studentId === studentId && p.taskId === taskId),
+          ),
+        ],
+      });
+    }
+  }
+
   resultRowsForGroup(groupId: string): Array<{
     student: User;
     task: GroupTask;
@@ -758,6 +1228,8 @@ export class AcademyDataService {
     correct: number;
     incorrect: number;
     pending: number;
+    notaFinal?: number;
+    intentoId?: string;
   }> {
     const studentIds = this.store()
       .groupStudents.filter((membership) => membership.groupId === groupId)
@@ -786,6 +1258,8 @@ export class AcademyDataService {
             correct: answers.filter((answer) => answer.isCorrect).length,
             incorrect: answers.filter((answer) => !answer.isCorrect).length,
             pending: Math.max(questions.length - answers.length, 0),
+            notaFinal: this.progressFor(studentId, task.id).notaFinal,
+            intentoId: this.progressFor(studentId, task.id).intentoId,
           },
         ];
       });
@@ -824,6 +1298,11 @@ export class AcademyDataService {
   private commit(store: AcademyStore): void {
     this.state.set(store);
     if (this.isBrowser()) {
+      try {
+        localStorage.setItem(STORE_KEY, JSON.stringify(store));
+      } catch (error) {
+        console.warn('No se pudo guardar el store en localStorage.', error);
+      }
       void this.saveDockerStore(store);
     }
   }
@@ -890,13 +1369,32 @@ export class AcademyDataService {
   }
 
   private normalizeStore(store: AcademyStore): AcademyStore {
+    const scenarioPatches = DEMO_SCENARIO_CONTEXT;
+
     return {
       ...store,
-      situations: store.situations.map((s) => ({
-        ...s,
-        category: s.category ?? 'CLINICAL',
-        resources: s.resources ?? '',
-      })),
+      situations: store.situations.map((s) => {
+        const base = {
+          ...s,
+          category: s.category ?? 'CLINICAL',
+          resources: s.resources ?? '',
+        };
+        if (s.id === 'sit-demo') {
+          return { ...base, ...DEMO_CASE_INTRO };
+        }
+        return base;
+      }),
+      scenarios: store.scenarios.map((s) => {
+        const patch = scenarioPatches[s.id];
+        return patch
+          ? {
+              ...s,
+              context: patch.context,
+              contextPanelTitle: patch.contextPanelTitle,
+              contextPanelBody: patch.contextPanelBody,
+            }
+          : s;
+      }),
       questions: store.questions.map((q) => ({
         ...q,
         questionType: q.questionType ?? 'MULTIPLE_CHOICE',
@@ -926,7 +1424,63 @@ export class AcademyDataService {
         emergencyLockout: false,
         updatedAt: new Date().toISOString(),
       },
+      rubricas: store.rubricas ?? [],
+      intentosEstudiante: store.intentosEstudiante ?? [],
+      taskSessions: this.normalizeTaskSessions(store),
+      sessionAuthorizations: this.normalizeSessionAuthorizations(store),
+      notifications: store.notifications ?? [],
     };
+  }
+
+  private normalizeTaskSessions(store: AcademyStore): TaskSession[] {
+    const existing = store.taskSessions ?? [];
+    if (existing.length) return existing;
+    const now = new Date().toISOString();
+    const end = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    return store.groupTasks.map((task) => {
+      const group = store.groups.find((g) => g.id === task.groupId);
+      const isDemo = task.id === DEMO_TASK_ID;
+      return {
+        id: `ses-mig-${task.id}`,
+        taskId: task.id,
+        groupId: task.groupId,
+        situationId: task.situationId,
+        teacherId: group?.teacherId ?? '',
+        scheduledStartAt: task.assignedAt,
+        scheduledEndAt: end,
+        maxDurationMinutes: 120,
+        estimatedMinutes: 90,
+        status: isDemo ? 'IN_PROGRESS' : 'NOT_STARTED',
+        startedAt: isDemo ? task.assignedAt : undefined,
+        allowRetries: false,
+        createdAt: now,
+        updatedAt: now,
+      };
+    });
+  }
+
+  private normalizeSessionAuthorizations(store: AcademyStore): SessionAuthorization[] {
+    const existing = store.sessionAuthorizations ?? [];
+    if (existing.length) return existing;
+    const now = new Date().toISOString();
+    const authorizations: SessionAuthorization[] = [];
+    for (const session of store.taskSessions ?? []) {
+      const studentIds = session.authorizedStudentIds?.length
+        ? session.authorizedStudentIds
+        : store.groupStudents.filter((m) => m.groupId === session.groupId).map((m) => m.studentId);
+      for (const studentId of studentIds) {
+        const isDemo = session.taskId === DEMO_TASK_ID && studentId === DEMO_STUDENT_ID;
+        authorizations.push({
+          id: `sau-mig-${session.id}-${studentId}`,
+          sessionId: session.id,
+          taskId: session.taskId,
+          studentId,
+          authCode: isDemo ? 'MS-DEMO001' : this.generateAuthCode(),
+          createdAt: now,
+        });
+      }
+    }
+    return authorizations;
   }
 
   private seedStore(): AcademyStore {
@@ -977,6 +1531,7 @@ export class AcademyDataService {
         'Son las 11 de la noche en un barrio con altas condiciones de vulnerabilidad: pobreza, violencias urbanas, robos, expendio de drogas, presencia de grupos armados ilegales y riñas callejeras entre vecinos.',
       context:
         'Un hombre de aproximadamente 28 años entra a su domicilio, donde reside con su actual pareja de 22 años. Ella tiene una hija de 3 años. Ese mismo día hubo un altercado verbal con maltrato psicológico y chantaje emocional. En la noche, el hombre saca una navaja, hiere a la menor causándole la muerte inmediata, y luego hiere múltiples veces a la mujer, dejándola gravemente herida.',
+      ...DEMO_CASE_INTRO,
       learningObjective:
         'Aplicar primeros auxilios psicológicos, activar rutas interdisciplinarias y tomar decisiones éticas ante violencia de género y riesgo de feminicidio.',
       difficulty: 'INTERMEDIATE',
@@ -987,12 +1542,15 @@ export class AcademyDataService {
       createdAt: now,
       updatedAt: now,
     };
+    const hospitalPatch = DEMO_SCENARIO_CONTEXT['sce-hospital'];
+    const comisariaPatch = DEMO_SCENARIO_CONTEXT['sce-comisaria'];
     const hospital: Scenario = {
       id: 'sce-hospital',
       situationId: situation.id,
       title: 'Atención en Hospital (Urgencia Vital y Crisis)',
-      context:
-        'La sobreviviente está en shock hipovolémico y emocional. La familia (madre y hermanos) llega al hospital en estado de alteración, exigiendo ver a la niña, quien ha fallecido, pero ellos aún no lo saben con certeza.',
+      context: hospitalPatch.context,
+      contextPanelTitle: hospitalPatch.contextPanelTitle,
+      contextPanelBody: hospitalPatch.contextPanelBody,
       instructions: 'Responde las preguntas sobre intervención inmediata, marco normativo y protocolos clínicos.',
       orderIndex: 1,
       createdAt: now,
@@ -1001,8 +1559,9 @@ export class AcademyDataService {
       id: 'sce-comisaria',
       situationId: situation.id,
       title: 'Comisaría de Familia (Restablecimiento de Derechos)',
-      context:
-        'Han pasado 15 días. La mujer ha sido dada de alta, pero tiene secuelas físicas y trauma complejo. Se debe definir la medida de protección y el apoyo psicológico a largo plazo.',
+      context: comisariaPatch.context,
+      contextPanelTitle: comisariaPatch.contextPanelTitle,
+      contextPanelBody: comisariaPatch.contextPanelBody,
       instructions: 'Responde desde un enfoque de derechos, seguridad y no revictimización.',
       orderIndex: 2,
       createdAt: now,
@@ -1233,7 +1792,7 @@ export class AcademyDataService {
         {
           id: 'spr-demo',
           userId: student.id,
-          code: 'EST-001',
+          code: '1020304050',
           nickname: '',
           avatarId: DEFAULT_AVATAR_ID,
           onboardingCompleted: false,
@@ -1265,6 +1824,40 @@ export class AcademyDataService {
       ],
       studentAnswers: [],
       studentProgress: [],
+      rubricas: [],
+      intentosEstudiante: [],
+      taskSessions: [
+        {
+          id: 'ses-demo',
+          taskId: 'tsk-demo',
+          groupId: group.id,
+          situationId: situation.id,
+          teacherId: teacher.id,
+          scheduledStartAt: now,
+          scheduledEndAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          maxDurationMinutes: 120,
+          estimatedMinutes: 90,
+          academicSpace: 'Grupo PAP y rutas de atención',
+          location: 'Campus virtual MIND-SPHERE',
+          authorizedStudentIds: [student.id],
+          status: 'IN_PROGRESS',
+          startedAt: now,
+          allowRetries: true,
+          createdAt: now,
+          updatedAt: now,
+        },
+      ],
+      sessionAuthorizations: [
+        {
+          id: 'sau-demo',
+          sessionId: 'ses-demo',
+          taskId: 'tsk-demo',
+          studentId: student.id,
+          authCode: 'MS-DEMO001',
+          createdAt: now,
+        },
+      ],
+      notifications: [],
     };
   }
 }

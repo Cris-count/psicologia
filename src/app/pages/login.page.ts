@@ -3,8 +3,10 @@ import { Component, computed, HostListener, inject, OnInit, signal } from '@angu
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { APP_LOGO_PATH, APP_NAME, APP_SHORT_TAGLINE } from '../core/branding.constants';
+import { User } from '../models/academy.models';
 import { AcademyDataService } from '../services/academy-data.service';
 import { AuthService } from '../services/auth.service';
+import { AuthVerificationService } from '../services/auth-verification.service';
 import { GuideCharacterComponent } from '../shared/guide/components/guide-character/guide-character.component';
 import { GuideService } from '../shared/guide/services/guide.service';
 import { StudentProfileService } from '../shared/guide/services/student-profile.service';
@@ -83,11 +85,18 @@ import { ThreeBackgroundComponent } from '../shared/ui/three-background/three-ba
           <div class="portal-frame">
             <div class="portal-header">
               <span class="portal-badge">ONLINE</span>
-              <h2>Iniciar sesión</h2>
-              <p>Un solo acceso. El sistema detecta tu rol automáticamente.</p>
+              <h2>{{ loginStep() === 'verify' ? 'Verificación' : 'Iniciar sesión' }}</h2>
+              <p>
+                @if (loginStep() === 'verify') {
+                  Ingresa el código de 6 dígitos que enviamos a {{ email }}.
+                } @else {
+                  Un solo acceso. El sistema detecta tu rol automáticamente.
+                }
+              </p>
             </div>
 
-            <form class="portal-form" (ngSubmit)="login()">
+            @if (loginStep() === 'credentials') {
+            <form class="portal-form" (ngSubmit)="requestVerification()">
               <label class="portal-field" for="login-email">
                 Correo institucional
                 <span class="field-shell">
@@ -106,25 +115,55 @@ import { ThreeBackgroundComponent } from '../shared/ui/three-background/three-ba
                 </span>
               </label>
 
-              <label class="portal-field" for="login-password">
+              <label class="portal-field" for="login-credential">
                 <span class="field-label-row">
-                  Contraseña
-                  <a href="#" (click)="$event.preventDefault()">¿Olvidaste tu clave?</a>
+                  Tarjeta de identidad
+                  <small>(estudiantes) · Contraseña (docente/admin)</small>
                 </span>
                 <span class="field-shell">
                   <input
-                    id="login-password"
-                    name="password"
-                    type="password"
-                    [(ngModel)]="password"
+                    id="login-credential"
+                    name="credential"
+                    type="text"
+                    [(ngModel)]="credential"
                     autocomplete="current-password"
-                    placeholder="••••••••"
+                    placeholder="Documento o contraseña"
                     required
                     [disabled]="submitting()"
                   />
-                  <span class="material-symbols-outlined" aria-hidden="true">lock</span>
+                  <span class="material-symbols-outlined" aria-hidden="true">badge</span>
                 </span>
               </label>
+
+              <button class="portal-submit" type="submit" [disabled]="submitting()" (mouseenter)="sfx.playHover()">
+                <span class="material-symbols-outlined" aria-hidden="true">mail</span>
+                {{ submitting() ? 'Enviando código...' : 'ENVIAR CÓDIGO AL CORREO' }}
+              </button>
+            </form>
+            } @else {
+            <form class="portal-form" (ngSubmit)="confirmVerification()">
+              <label class="portal-field" for="login-verification-code">
+                Código de verificación
+                <span class="field-shell">
+                  <input
+                    id="login-verification-code"
+                    name="verificationCode"
+                    type="text"
+                    inputmode="numeric"
+                    maxlength="6"
+                    [(ngModel)]="verificationCode"
+                    autocomplete="one-time-code"
+                    placeholder="000000"
+                    required
+                    [disabled]="submitting()"
+                  />
+                  <span class="material-symbols-outlined" aria-hidden="true">pin</span>
+                </span>
+              </label>
+
+              @if (infoMessage()) {
+                <p class="form-hint muted">{{ infoMessage() }}</p>
+              }
 
               @if (error()) {
                 <p class="portal-error" role="alert">{{ error() }}</p>
@@ -132,15 +171,26 @@ import { ThreeBackgroundComponent } from '../shared/ui/three-background/three-ba
 
               <button class="portal-submit" type="submit" [disabled]="submitting()" (mouseenter)="sfx.playHover()">
                 <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
-                {{ submitting() ? 'Conectando...' : 'JUGAR AHORA' }}
+                {{ submitting() ? 'Verificando...' : 'VERIFICAR E INGRESAR' }}
+              </button>
+              <button class="ghost-button" type="button" (click)="backToCredentials()" [disabled]="submitting()">
+                Volver
               </button>
             </form>
+            }
 
+            @if (loginStep() === 'credentials' && error()) {
+              <p class="portal-error" role="alert">{{ error() }}</p>
+            }
+
+            @if (loginStep() === 'credentials') {
             <div class="demo-panel" aria-label="Credenciales demo">
-              <strong>Demo — usa cualquier rol</strong>
-              <span>superadmin&#64;demo.edu · maestro&#64;demo.edu · estudiante&#64;demo.edu</span>
-              <span>Contraseña: demo123</span>
+              <strong>Docente / admin</strong>
+              <span>maestro&#64;demo.edu · contraseña demo123</span>
+              <strong>Estudiante</strong>
+              <span>estudiante&#64;demo.edu · tarjeta 1020304050 · luego código al correo</span>
             </div>
+            }
           </div>
         </div>
 
@@ -168,6 +218,7 @@ export class LoginPage implements OnInit {
   protected readonly appTagline = APP_SHORT_TAGLINE;
   protected readonly appLogo = APP_LOGO_PATH;
   private readonly auth = inject(AuthService);
+  private readonly verification = inject(AuthVerificationService);
   private readonly data = inject(AcademyDataService);
   private readonly router = inject(Router);
   private readonly loader = inject(GameLoaderService);
@@ -178,7 +229,10 @@ export class LoginPage implements OnInit {
   protected readonly presence = inject(PresenceService);
 
   email = '';
-  password = '';
+  credential = '';
+  verificationCode = '';
+  readonly loginStep = signal<'credentials' | 'verify'>('credentials');
+  readonly infoMessage = signal('');
   readonly error = signal('');
   readonly submitting = signal(false);
   readonly parallaxX = signal(0);
@@ -200,20 +254,63 @@ export class LoginPage implements OnInit {
     this.parallaxY.set(y);
   }
 
-  async login(): Promise<void> {
+  async requestVerification(): Promise<void> {
+    if (this.submitting()) return;
+
+    this.error.set('');
+    this.infoMessage.set('');
+    this.submitting.set(true);
+    this.sfx.playClick();
+
+    const preview = this.auth.authenticateLogin(this.email.trim(), this.credential);
+    if (!preview.user) {
+      this.submitting.set(false);
+      this.sfx.playError();
+      this.error.set(preview.error ?? 'Credenciales inválidas.');
+      return;
+    }
+
+    const result = await this.verification.requestCode(this.email, this.credential);
+    this.submitting.set(false);
+
+    if (!result.ok) {
+      this.sfx.playError();
+      this.error.set(result.error ?? 'No se pudo enviar el código de verificación.');
+      return;
+    }
+
+    this.sfx.playSuccess();
+    this.infoMessage.set(result.message ?? 'Revisa tu correo.');
+    this.verificationCode = '';
+    this.loginStep.set('verify');
+  }
+
+  backToCredentials(): void {
+    this.loginStep.set('credentials');
+    this.verificationCode = '';
+    this.error.set('');
+    this.infoMessage.set('');
+  }
+
+  async confirmVerification(): Promise<void> {
     if (this.submitting()) return;
 
     this.error.set('');
     this.submitting.set(true);
     this.sfx.playClick();
 
-    const user = this.auth.authenticateCredentials(this.email.trim(), this.password);
-    if (!user) {
+    const result = await this.verification.verifyCode(this.email, this.verificationCode);
+    if (!result.user) {
       this.submitting.set(false);
       this.sfx.playError();
-      this.error.set('Credenciales inválidas o usuario inactivo.');
+      this.error.set(result.error ?? 'Código inválido.');
       return;
     }
+
+    await this.completeLogin(result.user);
+  }
+
+  private async completeLogin(user: User): Promise<void> {
 
     this.guide.setContext('loader');
 

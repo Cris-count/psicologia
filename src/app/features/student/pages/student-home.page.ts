@@ -6,6 +6,7 @@ import { ThreeBackgroundComponent } from '../../../shared/ui/three-background/th
 import { GameGroup, GroupTask } from '../../../models/academy.models';
 import { AcademyDataService, DEMO_STUDENT_ID } from '../../../services/academy-data.service';
 import { AuthService } from '../../../services/auth.service';
+import { NotificationService } from '../../../services/notification.service';
 import { GuideService } from '../../../shared/guide/services/guide.service';
 import { StudentProfileService } from '../../../shared/guide/services/student-profile.service';
 import { GameHudComponent } from '../../../shared/ui/game-hud/game-hud.component';
@@ -41,7 +42,39 @@ import { GameProgressComponent } from '../../../shared/ui/game-progress/game-pro
 
         <nav class="student-flow" aria-label="Navegacion del estudiante">
           <button type="button" class="active-nav" (click)="goBackInFlow()">{{ currentMenuLabel() }}</button>
+          @if (unreadNotifications() > 0) {
+            <button type="button" class="ghost-button" (click)="toggleNotifications()">
+              Notificaciones ({{ unreadNotifications() }})
+            </button>
+          } @else {
+            <button type="button" class="ghost-button" (click)="toggleNotifications()">Notificaciones</button>
+          }
         </nav>
+
+        @if (showNotifications()) {
+          <section class="panel">
+            <h3>Notificaciones</h3>
+            <div class="task-list">
+              @for (note of notifications(); track note.id) {
+                <article class="task-row" [class.muted]="note.readAt">
+                  <span>
+                    <strong>{{ note.subject }}</strong>
+                    <small>{{ note.body }}</small>
+                    <small>{{ note.createdAt | date: 'short' }}</small>
+                    @if (note.status === 'FAILED') {
+                      <small class="form-error">Correo no enviado: {{ note.deliveryError }}</small>
+                    }
+                  </span>
+                  @if (!note.readAt) {
+                    <button type="button" class="ghost-button" (click)="markNotificationRead(note.id)">Marcar leída</button>
+                  }
+                </article>
+              } @empty {
+                <p class="muted">No tienes notificaciones.</p>
+              }
+            </div>
+          </section>
+        }
       }
 
       @if (view === 'groups') {
@@ -215,10 +248,13 @@ export class StudentHomePage implements OnInit {
     public readonly data: AcademyDataService,
     public readonly auth: AuthService,
     public readonly profile: StudentProfileService,
+    private readonly notify: NotificationService,
     private readonly guide: GuideService,
     private readonly router: Router,
     private readonly route: ActivatedRoute,
   ) {}
+
+  readonly showNotifications = signal(false);
 
   ngOnInit(): void {
     console.log('Student module loaded');
@@ -250,6 +286,24 @@ export class StudentHomePage implements OnInit {
 
   student() {
     return this.auth.currentUser();
+  }
+
+  notifications() {
+    const student = this.student();
+    return student ? this.notify.notificationsForEmail(student.email) : [];
+  }
+
+  unreadNotifications(): number {
+    const student = this.student();
+    return student ? this.notify.unreadCount(student.email) : 0;
+  }
+
+  toggleNotifications(): void {
+    this.showNotifications.update((v) => !v);
+  }
+
+  markNotificationRead(id: string): void {
+    this.notify.markRead(id);
   }
 
   groups(): GameGroup[] {

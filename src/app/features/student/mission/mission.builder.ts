@@ -41,8 +41,8 @@ export function buildMissionBlueprint(
   const totalQuestions = zones.reduce((sum, zone) => sum + zone.questions.length, 0);
 
   return {
-    briefingTitle: situation.title,
-    briefingContext: situation.context,
+    introTitle: situation.generalContextTitle ?? situation.title,
+    introContext: situation.generalContextBody ?? situation.context,
     objective: situation.learningObjective,
     difficulty: situation.difficulty,
     zones,
@@ -94,4 +94,30 @@ export function isZoneUnlocked(
 
 export function zoneLabel(zone: MissionZone): string {
   return zone.scenario.title;
+}
+
+export function scenarioContextTitle(zone: MissionZone): string {
+  return zone.scenario.contextPanelTitle ?? zone.scenario.title;
+}
+
+/** Contexto específico del escenario (no incluye el contexto general del caso). */
+export function scenarioContextBody(zone: MissionZone): string {
+  return zone.scenario.contextPanelBody ?? zone.scenario.context;
+}
+
+export function zonePlayState(
+  zones: MissionZone[],
+  zone: MissionZone,
+  answeredIds: Set<string>,
+  activeZoneIndex: number,
+  phase: string,
+): import('../../../models/evaluation.models').ScenarioPlayState {
+  const prog = zoneProgress(zone, answeredIds);
+  if (prog.complete) return 'completed';
+  if (!isZoneUnlocked(zones, zone.index, answeredIds)) return 'locked';
+  if (zone.index === activeZoneIndex) {
+    if (phase === 'scenario-context') return 'context';
+    if (phase === 'decision') return 'questions';
+  }
+  return 'available';
 }

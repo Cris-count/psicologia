@@ -484,6 +484,38 @@
   line-height: 1.5;
 }
 
+.case-intro-card {
+  text-align: left;
+  width: min(100%, 640px);
+  max-height: min(88vh, 720px);
+  display: flex;
+  flex-direction: column;
+}
+
+.case-intro-card h2 {
+  text-align: left;
+  font-size: clamp(1rem, 2.2vw, 1.35rem);
+  line-height: 1.3;
+}
+
+.case-intro-body {
+  flex: 1;
+  min-height: 0;
+  max-height: min(52vh, 420px);
+  overflow-y: auto;
+  margin: 0 0 1rem;
+  padding-right: 0.35rem;
+  color: var(--psy-ink);
+  font-size: 0.82rem;
+  line-height: 1.55;
+  white-space: pre-line;
+}
+
+.case-intro-card .game-btn {
+  align-self: stretch;
+  margin-top: auto;
+}
+
 .game-tag {
   display: inline-block;
   padding: 0.25rem 0.6rem;
@@ -518,6 +550,100 @@
 .trophy {
   font-size: 2.5rem;
   color: var(--psy-gold);
+}
+
+.final-result-card {
+  text-align: left;
+}
+
+.final-case-name {
+  margin: 0 0 1rem;
+  font-size: 0.82rem;
+  color: var(--psy-ink);
+}
+
+.final-grade {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.35rem;
+  margin: 0.5rem 0 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--psy-radius-sm);
+  background: linear-gradient(145deg, rgba(244, 197, 66, 0.12), rgba(20, 18, 40, 0.9));
+  border: 1px solid rgba(244, 197, 66, 0.35);
+}
+
+.final-grade-label {
+  font-family: var(--psy-font-hud);
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--psy-muted);
+}
+
+.final-grade-value {
+  font-family: var(--psy-font-display);
+  font-size: clamp(2rem, 6vw, 2.75rem);
+  color: var(--psy-gold);
+  line-height: 1;
+}
+
+.final-grade-scale {
+  font-size: 0.9rem;
+  color: var(--psy-muted);
+}
+
+.final-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem 1rem;
+  margin: 0 0 1rem;
+  padding: 0;
+}
+
+.final-stats div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.final-stats dt {
+  margin: 0;
+  font-family: var(--psy-font-hud);
+  font-size: 0.48rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--psy-muted);
+}
+
+.final-stats dd {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--psy-ink);
+}
+
+.final-stats .ok {
+  color: #52c9a8;
+}
+
+.final-stats .bad {
+  color: var(--psy-danger);
+}
+
+.final-feedback {
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: var(--psy-radius-sm);
+  border: 1px solid rgba(79, 195, 255, 0.25);
+  background: #12102a;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--psy-ink);
+}
+
+.final-result-card .game-btn {
+  width: 100%;
 }
 
 .game-decision-layer {
@@ -703,6 +829,31 @@
   font-size: 0.72rem;
   line-height: 1.45;
   color: var(--psy-muted);
+}
+
+.case-panel-context--intro {
+  max-height: min(38vh, 280px);
+  overflow-y: auto;
+  padding-right: 0.25rem;
+  font-size: 0.74rem;
+  line-height: 1.55;
+  color: var(--psy-ink);
+}
+
+.case-context-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.case-context-actions .game-btn {
+  width: 100%;
+}
+
+.case-continue-btn {
+  align-self: flex-start;
+  margin-top: 0.25rem;
 }
 
 .case-label {

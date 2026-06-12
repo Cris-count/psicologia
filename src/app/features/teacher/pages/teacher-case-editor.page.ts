@@ -11,6 +11,7 @@ import {
   SituationCategory,
 } from '../../../models/academy.models';
 import { AcademyDataService } from '../../../services/academy-data.service';
+import { validateSituationForPublish } from '../../../services/case-publish.validator';
 import { AuthService } from '../../../services/auth.service';
 
 @Component({
@@ -41,6 +42,12 @@ import { AuthService } from '../../../services/auth.service';
           <label>Título <input [(ngModel)]="title" name="title" required /></label>
           <label>Descripción <textarea [(ngModel)]="description" name="description"></textarea></label>
           <label>Contexto psicológico <textarea [(ngModel)]="context" name="context"></textarea></label>
+          <label>Título contexto general (intro simulador)
+            <input [(ngModel)]="generalContextTitle" name="generalContextTitle" placeholder="CASO 1. …" />
+          </label>
+          <label>Texto contexto general (solo al iniciar simulador)
+            <textarea [(ngModel)]="generalContextBody" name="generalContextBody" rows="6"></textarea>
+          </label>
           <label>Objetivo de aprendizaje <textarea [(ngModel)]="learningObjective" name="objective"></textarea></label>
           <label>Recursos adicionales <textarea [(ngModel)]="resources" name="resources"></textarea></label>
           <div class="form-row">
@@ -261,6 +268,8 @@ export class TeacherCaseEditorPage implements OnInit {
   title = '';
   description = '';
   context = '';
+  generalContextTitle = '';
+  generalContextBody = '';
   learningObjective = '';
   resources = '';
   category: SituationCategory = 'CLINICAL';
@@ -351,6 +360,8 @@ export class TeacherCaseEditorPage implements OnInit {
         title: this.title,
         description: this.description,
         context: this.context,
+        generalContextTitle: this.generalContextTitle,
+        generalContextBody: this.generalContextBody,
         learningObjective: this.learningObjective,
         resources: this.resources,
         category: this.category,
@@ -365,6 +376,8 @@ export class TeacherCaseEditorPage implements OnInit {
       title: this.title,
       description: this.description,
       context: this.context,
+      generalContextTitle: this.generalContextTitle,
+      generalContextBody: this.generalContextBody,
       learningObjective: this.learningObjective,
       resources: this.resources,
       category: this.category,
@@ -382,10 +395,14 @@ export class TeacherCaseEditorPage implements OnInit {
 
   publishCase(): void {
     const id = this.situationId();
-    if (id) {
-      this.data.setSituationEnabled(id, true);
-      this.message.set('Caso publicado y habilitado para estudiantes.');
+    if (!id) return;
+    const validation = validateSituationForPublish(this.data, id);
+    if (!validation.ok) {
+      this.message.set(validation.errors[0] ?? 'El caso no cumple la estructura requerida.');
+      return;
     }
+    this.data.setSituationEnabled(id, true);
+    this.message.set('Caso publicado y habilitado para estudiantes.');
   }
 
   addScenario(): void {
@@ -450,6 +467,8 @@ export class TeacherCaseEditorPage implements OnInit {
     this.title = situation.title;
     this.description = situation.description;
     this.context = situation.context;
+    this.generalContextTitle = situation.generalContextTitle ?? '';
+    this.generalContextBody = situation.generalContextBody ?? '';
     this.learningObjective = situation.learningObjective;
     this.resources = situation.resources ?? '';
     this.category = situation.category;

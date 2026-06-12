@@ -14,7 +14,7 @@ export interface MissionPhaserBridge {
 export function createBridge(): MissionPhaserBridge {
   return {
     state: {
-      phase: 'briefing',
+      phase: 'intro',
       playerX: 0,
       playerY: 0,
       accent: '#4fc3ff',
