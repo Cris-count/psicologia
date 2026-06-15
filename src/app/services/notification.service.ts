@@ -76,6 +76,56 @@ export class NotificationService {
     );
   }
 
+  /** REQ-05 — estudiante agregado a la lista de autorizados de una simulación ya agendada. */
+  notifyStudentAddedToSimulation(params: {
+    studentEmail: string;
+    studentName: string;
+    caseTitle: string;
+    documentId: string;
+    accessUrl: string;
+    academicSpace: string;
+    scheduledStartAt: string;
+    scheduledEndAt: string;
+  }): Promise<NotificationRecord> {
+    const start = new Date(params.scheduledStartAt).toLocaleString('es-CO');
+    const end = new Date(params.scheduledEndAt).toLocaleString('es-CO');
+    return this.queue(
+      'STUDENT_LIST_CHANGED',
+      params.studentEmail,
+      `Acceso autorizado: ${params.caseTitle}`,
+      `Hola ${params.studentName},
+
+Fuiste agregado a la simulación «${params.caseTitle}» (${params.academicSpace}).
+
+Inicio oficial: ${start}
+Fin programado: ${end}
+
+URL de acceso: ${params.accessUrl}
+Correo universitario: ${params.studentEmail}
+Tarjeta de identidad: ${params.documentId}
+
+Ingresa con tu correo universitario y tu tarjeta de identidad cuando el docente inicie la sesión.`,
+    );
+  }
+
+  /** REQ-05 — estudiante retirado de la lista de autorizados. */
+  notifyStudentRemovedFromSimulation(
+    studentEmail: string,
+    studentName: string,
+    caseTitle: string,
+  ): Promise<NotificationRecord> {
+    return this.queue(
+      'STUDENT_LIST_CHANGED',
+      studentEmail,
+      `Acceso revocado: ${caseTitle}`,
+      `Hola ${studentName},
+
+Fuiste retirado de la lista de autorizados para la simulación «${caseTitle}».
+
+Ya no podrás ingresar a este caso agendado. Si crees que es un error, contacta a tu docente.`,
+    );
+  }
+
   notifyScheduleCredentials(params: {
     studentEmail: string;
     studentName: string;

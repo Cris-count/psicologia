@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { TaskDraft, ScheduleTaskResult } from '../models/academy.models';
+import { TaskDraft, ScheduleTaskResult, UpdateAuthorizedListResult, AuthorizedListDraft } from '../models/academy.models';
 import { SessionAuthorization } from '../models/session.models';
 import { AcademyDataService } from './academy-data.service';
 import { NotificationService } from './notification.service';
@@ -19,6 +19,42 @@ export class SchedulingService {
     const accessUrl = this.accessUrl();
     const sends = result.authorizations.map((auth) => this.notifyCredentials(auth, result, situation?.title ?? 'Caso', accessUrl));
     return Promise.all(sends).then(() => result);
+  }
+
+  /** REQ-05 — actualiza autorizados y notifica solo a los afectados. */
+  async updateAuthorizedAndNotify(taskId: string, draft: AuthorizedListDraft): Promise<UpdateAuthorizedListResult> {
+    const result = this.data.updateSessionAuthorizedStudents(taskId, draft);
+    if (!result.ok) {
+      return result;
+    }
+
+    const situation = this.data.situationForTask(result.task);
+    const caseTitle = situation?.title ?? 'Caso';
+    const accessUrl = this.accessUrl();
+    const session = result.session;
+
+    for (const studentId of result.addedStudentIds) {
+      const student = this.data.userById(studentId);
+      if (!student) continue;
+      await this.notify.notifyStudentAddedToSimulation({
+        studentEmail: student.email,
+        studentName: student.name,
+        caseTitle,
+        documentId: this.data.documentIdForStudent(studentId),
+        accessUrl,
+        academicSpace: session.academicSpace ?? '',
+        scheduledStartAt: session.scheduledStartAt,
+        scheduledEndAt: session.scheduledEndAt,
+      });
+    }
+
+    for (const studentId of result.removedStudentIds) {
+      const student = this.data.userById(studentId);
+      if (!student) continue;
+      await this.notify.notifyStudentRemovedFromSimulation(student.email, student.name, caseTitle);
+    }
+
+    return result;
   }
 
   private accessUrl(): string {

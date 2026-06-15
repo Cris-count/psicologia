@@ -949,6 +949,43 @@
   color: var(--psy-accent);
 }
 
+.game-hud-timer {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-family: var(--psy-font-display);
+  font-size: 0.95rem;
+  color: var(--psy-gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.case-question-nav {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0.5rem;
+}
+
+.case-question-nav-label {
+  text-align: center;
+  font-family: var(--psy-font-hud);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--psy-accent);
+}
+
+.case-answer-saved {
+  margin: 0.65rem 0 0;
+  padding: 0.55rem 0.65rem;
+  border-left: 3px solid var(--psy-accent);
+  border-radius: 0 var(--psy-radius-sm) var(--psy-radius-sm) 0;
+  background: rgba(79, 195, 255, 0.08);
+  color: var(--psy-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
 .scenario-results-card {
   max-width: min(720px, 96vw);
   max-height: min(88vh, 900px);

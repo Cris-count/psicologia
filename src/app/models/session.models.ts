@@ -23,8 +23,10 @@ export interface TaskSession {
   finishedAt?: string;
   /** Estudiantes autorizados para esta simulación agendada. */
   authorizedStudentIds?: string[];
-  /** REQ-12 — reintentos solo si el docente lo autoriza. */
+  /** REQ-12 — reintentos solo si el docente autoriza al estudiante. */
   allowRetries: boolean;
+  /** Estudiantes con permiso explícito de nuevo intento (REQ-12). */
+  retryAuthorizedStudentIds?: string[];
   createdAt: string;
   updatedAt: string;
 }

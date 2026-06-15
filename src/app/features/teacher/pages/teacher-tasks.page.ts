@@ -17,7 +17,7 @@ import { SchedulingService } from '../../../services/scheduling.service';
       <div>
         <p class="eyebrow">Misiones de simulación</p>
         <h2>Agendar simulación</h2>
-        <p>Programa un caso, autoriza estudiantes y envía credenciales por correo (REQ-04).</p>
+        <p>Programa un caso, autoriza estudiantes y modifica la lista después del agendamiento (REQ-04 / REQ-05).</p>
       </div>
     </header>
 
@@ -198,6 +198,44 @@ import { SchedulingService } from '../../../services/scheduling.service';
                   <input type="checkbox" [checked]="session.allowRetries" (change)="toggleRetries(task.id, session)" />
                   <span>Permitir reintentos (REQ-12)</span>
                 </label>
+                @if (session.status !== 'FINISHED') {
+                  @if (editingAuthorizedTaskId === task.id) {
+                    <div class="authorized-editor">
+                      <h5>Modificar autorizados (REQ-05)</h5>
+                      <p class="muted form-hint">Los cambios envían correo solo a quienes se agreguen o retiren.</p>
+                      @for (student of studentsForGroup(task.groupId); track student.id) {
+                        <label class="checklist-item">
+                          <input
+                            type="checkbox"
+                            [checked]="isEditAuthorized(student.id)"
+                            (change)="toggleEditAuthorized(student.id)"
+                          />
+                          <span>
+                            <strong>{{ student.name }}</strong>
+                            <small>{{ student.email }}</small>
+                          </span>
+                        </label>
+                      }
+                      <label>Nuevo invitado — nombre <input [(ngModel)]="editInviteName" [ngModelOptions]="{ standalone: true }" /></label>
+                      <label>Correo <input type="email" [(ngModel)]="editInviteEmail" [ngModelOptions]="{ standalone: true }" /></label>
+                      <label>Tarjeta <input [(ngModel)]="editInviteDocumentId" [ngModelOptions]="{ standalone: true }" /></label>
+                      <button class="ghost-button" type="button" (click)="addEditInvitee()">Agregar invitado</button>
+                      @for (inv of editInvitees; track inv.email) {
+                        <small class="muted">Invitado: {{ inv.name }} — {{ inv.email }}</small>
+                      }
+                      <div class="checklist-actions">
+                        <button class="primary-button" type="button" [disabled]="updatingAuthorized()" (click)="saveAuthorizedList(task)">
+                          {{ updatingAuthorized() ? 'Guardando…' : 'Guardar y notificar' }}
+                        </button>
+                        <button class="ghost-button" type="button" (click)="cancelEditAuthorized()">Cancelar</button>
+                      </div>
+                    </div>
+                  } @else {
+                    <button class="ghost-button" type="button" (click)="startEditAuthorized(task)">
+                      Editar lista de autorizados
+                    </button>
+                  }
+                }
               </div>
             }
           </div>
@@ -248,6 +286,24 @@ import { SchedulingService } from '../../../services/scheduling.service';
         gap: 0.5rem;
         margin-top: 0.5rem;
       }
+
+      .authorized-editor {
+        display: grid;
+        gap: 0.5rem;
+        padding: 0.75rem;
+        border: 1px dashed var(--psy-line);
+        border-radius: var(--psy-radius-sm);
+        background: rgba(8, 4, 26, 0.35);
+      }
+
+      .authorized-editor h5 {
+        margin: 0;
+        font-family: var(--psy-font-hud);
+        font-size: 0.68rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--psy-accent);
+      }
     `,
   ],
 })
@@ -260,6 +316,14 @@ export class TeacherTasksPage {
   readonly message = signal('');
   readonly taskError = signal('');
   readonly schedulingInProgress = signal(false);
+  readonly updatingAuthorized = signal(false);
+
+  editingAuthorizedTaskId = '';
+  editAuthorizedIds = new Set<string>();
+  editInvitees: { name: string; email: string; documentId: string }[] = [];
+  editInviteName = '';
+  editInviteEmail = '';
+  editInviteDocumentId = '';
 
   selectedGroupId = '';
   selectedSituationId = '';
@@ -409,11 +473,89 @@ export class TeacherTasksPage {
   }
 
   studentsInSelectedGroup(): User[] {
-    if (!this.selectedGroupId) return [];
+    return this.studentsForGroup(this.selectedGroupId);
+  }
+
+  studentsForGroup(groupId: string): User[] {
+    if (!groupId) return [];
     const ids = new Set(
-      this.data.store().groupStudents.filter((m) => m.groupId === this.selectedGroupId).map((m) => m.studentId),
+      this.data.store().groupStudents.filter((m) => m.groupId === groupId).map((m) => m.studentId),
     );
     return this.data.store().users.filter((u) => u.role === 'STUDENT' && ids.has(u.id));
+  }
+
+  startEditAuthorized(task: GroupTask): void {
+    const session = this.sessionFor(task);
+    if (!session) return;
+    this.taskError.set('');
+    this.editingAuthorizedTaskId = task.id;
+    this.editAuthorizedIds = new Set(session.authorizedStudentIds ?? []);
+    this.editInvitees = [];
+    this.editInviteName = '';
+    this.editInviteEmail = '';
+    this.editInviteDocumentId = '';
+  }
+
+  cancelEditAuthorized(): void {
+    this.editingAuthorizedTaskId = '';
+    this.editAuthorizedIds = new Set();
+    this.editInvitees = [];
+  }
+
+  isEditAuthorized(studentId: string): boolean {
+    return this.editAuthorizedIds.has(studentId);
+  }
+
+  toggleEditAuthorized(studentId: string): void {
+    const next = new Set(this.editAuthorizedIds);
+    next.has(studentId) ? next.delete(studentId) : next.add(studentId);
+    this.editAuthorizedIds = next;
+  }
+
+  addEditInvitee(): void {
+    const name = this.editInviteName.trim();
+    const email = this.editInviteEmail.trim().toLowerCase();
+    const documentId = this.editInviteDocumentId.trim();
+    if (!name || !email.includes('@') || !documentId) {
+      this.taskError.set('Completa nombre, correo y tarjeta del invitado.');
+      return;
+    }
+    this.taskError.set('');
+    if (!this.editInvitees.some((i) => i.email === email)) {
+      this.editInvitees = [...this.editInvitees, { name, email, documentId }];
+    }
+    this.editInviteName = '';
+    this.editInviteEmail = '';
+    this.editInviteDocumentId = '';
+  }
+
+  async saveAuthorizedList(task: GroupTask): Promise<void> {
+    this.taskError.set('');
+    if (!this.editAuthorizedIds.size && !this.editInvitees.length) {
+      this.taskError.set('Selecciona al menos un estudiante autorizado.');
+      return;
+    }
+
+    this.updatingAuthorized.set(true);
+    const result = await this.scheduler.updateAuthorizedAndNotify(task.id, {
+      authorizedStudentIds: [...this.editAuthorizedIds],
+      invitees: [...this.editInvitees],
+    });
+    this.updatingAuthorized.set(false);
+
+    if (!result.ok) {
+      this.taskError.set(result.error);
+      return;
+    }
+
+    const added = result.addedStudentIds.length;
+    const removed = result.removedStudentIds.length;
+    this.message.set(
+      added || removed
+        ? `Lista actualizada (REQ-05). Correos enviados: ${added} agregado(s), ${removed} retirado(s).`
+        : 'Lista guardada sin cambios en los autorizados.',
+    );
+    this.cancelEditAuthorized();
   }
 
   isStudentAuthorized(studentId: string): boolean {

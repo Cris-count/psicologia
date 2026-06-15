@@ -68,6 +68,16 @@ export function nextUnansweredQuestion(zone: MissionZone, answeredIds: Set<strin
   return zone.questions.find((q) => !answeredIds.has(q.id)) ?? null;
 }
 
+export function questionAtIndex(zone: MissionZone, index: number): Question | null {
+  if (index < 0 || index >= zone.questions.length) return null;
+  return zone.questions[index] ?? null;
+}
+
+export function firstUnansweredIndex(zone: MissionZone, answeredIds: Set<string>): number {
+  const idx = zone.questions.findIndex((q) => !answeredIds.has(q.id));
+  return idx >= 0 ? idx : 0;
+}
+
 export function missionProgressPercent(zones: MissionZone[], answeredIds: Set<string>): number {
   const total = zones.reduce((sum, z) => sum + z.questions.length, 0);
   if (!total) return 100;

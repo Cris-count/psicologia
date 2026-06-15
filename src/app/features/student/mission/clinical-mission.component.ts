@@ -31,9 +31,10 @@ import { MissionGameState } from './mission-scene.types';
 import { buildWorldMap } from './game2d/map.builder';
 import {
   buildMissionBlueprint,
+  firstUnansweredIndex,
   isZoneUnlocked,
   missionProgressPercent,
-  nextUnansweredQuestion,
+  questionAtIndex,
   zoneLabel,
   zoneProgress,
   scenarioContextTitle,
@@ -55,7 +56,11 @@ import { PlayerAnimState } from './student-hero.assets';
           <strong>{{ groupName() }}</strong>
         </div>
         <div class="game-hud-block center">
-          <span class="game-hud-label">Energía mental</span>
+          @if (sessionTimer()) {
+            <span class="game-hud-label">Cronómetro</span>
+            <strong class="game-hud-timer">{{ sessionTimer() }}</strong>
+          }
+          <span class="game-hud-label">Progreso</span>
           <app-game-progress [value]="progressPercent()" [showLabel]="true" />
         </div>
         <div class="game-hud-block actions">
@@ -74,7 +79,7 @@ import { PlayerAnimState } from './student-hero.assets';
               [doors]="hallwayDoors()"
               [buildingType]="hallwayBuildingType()"
               [buildingLabel]="hallwayBuildingLabel()"
-              [questionIndex]="zoneProgressFor(currentZone()!).done + 1"
+              [questionIndex]="viewQuestionIndex() + 1"
               [questionTotal]="zoneProgressFor(currentZone()!).total"
               [resetToken]="hallwayResetToken()"
               (doorSelected)="pickOption(question, $event)"
@@ -242,7 +247,7 @@ import { PlayerAnimState } from './student-hero.assets';
             <div class="scenario-panel-inner">
               <header class="scenario-panel-head">
                 <span class="case-panel-tag">Escenario activo</span>
-                <span class="scenario-panel-step">{{ zoneProgressFor(zone).done + 1 }}/{{ zoneProgressFor(zone).total || 1 }}</span>
+                <span class="scenario-panel-step">{{ viewQuestionIndex() + 1 }}/{{ zoneProgressFor(zone).total || 1 }}</span>
               </header>
               <h3 class="case-panel-title">{{ scenarioContextTitle(zone) }}</h3>
 
@@ -258,10 +263,28 @@ import { PlayerAnimState } from './student-hero.assets';
                 </div>
               } @else if (phase() === 'decision' && decisionOpen() && currentQuestion(); as question) {
                 <p class="case-panel-context case-panel-context--compact">{{ zone.scenario.instructions }}</p>
+                <div class="case-question-nav">
+                  <button type="button" class="game-btn ghost" [disabled]="!canGoPreviousQuestion()" (click)="goPreviousQuestion()">
+                    ← Anterior
+                  </button>
+                  <span class="case-question-nav-label">Pregunta {{ viewQuestionIndex() + 1 }} / {{ zone.questions.length }}</span>
+                  <button type="button" class="game-btn ghost" [disabled]="!canGoNextQuestion()" (click)="goNextQuestion()">
+                    Siguiente →
+                  </button>
+                </div>
                 <div class="case-question">
-                  <span class="case-label">Pregunta {{ zoneProgressFor(zone).done + 1 }} de {{ zoneProgressFor(zone).total }}</span>
+                  <span class="case-label">Pregunta {{ viewQuestionIndex() + 1 }} de {{ zone.questions.length }}</span>
                   <p>{{ question.statement }}</p>
-                  <p class="case-hallway-hint">Explora el pasillo, acércate a una puerta y pulsa <kbd>E</kbd> para registrar tu respuesta.</p>
+                  @if (selectedAnswerLabel(question); as saved) {
+                    <p class="case-answer-saved">Respuesta registrada: {{ saved }}. Puedes cambiarla antes de finalizar el escenario.</p>
+                  } @else {
+                    <p class="case-hallway-hint">Explora el pasillo, acércate a una puerta y pulsa <kbd>E</kbd> para registrar tu respuesta.</p>
+                  }
+                  @if (zoneProgressFor(zone).complete) {
+                    <button type="button" class="game-btn primary" (click)="submitScenario()">
+                      Finalizar escenario
+                    </button>
+                  }
                   <button type="button" class="game-btn ghost case-hint" (click)="requestQuestionHint(question)">
                     Consultar pista
                   </button>
@@ -309,6 +332,7 @@ export class ClinicalMissionComponent implements OnInit, OnDestroy {
   readonly lastFeedback = signal<{ correct: boolean; text: string } | null>(null);
   readonly missionResetToken = signal(0);
   readonly hallwayResetToken = signal(0);
+  readonly viewQuestionIndex = signal(0);
 
   readonly finalAttempt = signal<IntentoEstudiante | null>(null);
   readonly gradingInProgress = signal(false);
@@ -356,7 +380,8 @@ export class ClinicalMissionComponent implements OnInit, OnDestroy {
   });
   readonly currentQuestion = computed(() => {
     const zone = this.currentZone();
-    return zone ? nextUnansweredQuestion(zone, this.answeredIds()) : null;
+    if (!zone) return null;
+    return questionAtIndex(zone, this.viewQuestionIndex());
   });
 
   readonly controlsEnabled = computed(() => this.phase() === 'map');
@@ -504,7 +529,7 @@ export class ClinicalMissionComponent implements OnInit, OnDestroy {
     } else {
       this.guide.show('Lee el contexto general del caso y pulsa «Entrar al simulador».', 'thinking');
     }
-    this.sessionTimerInterval = setInterval(() => this.timerTick.update((n) => n + 1), 30_000);
+    this.sessionTimerInterval = setInterval(() => this.timerTick.update((n) => n + 1), 1_000);
   }
 
   ngOnDestroy(): void {
@@ -593,12 +618,64 @@ export class ClinicalMissionComponent implements OnInit, OnDestroy {
 
   startScenarioQuestions(): void {
     this.sfx.playClick();
+    const zone = this.currentZone();
+    if (zone) {
+      this.viewQuestionIndex.set(firstUnansweredIndex(zone, this.answeredIds()));
+    }
     this.decisionOpen.set(true);
     this.phase.set('decision');
-    const zone = this.currentZone();
     const q = this.currentQuestion();
     if (q && zone) this.guide.setQuestionContext(q, zone.scenario);
-    this.guide.show('Explora el pasillo institucional y elige una puerta con E. No verás el resultado hasta terminar el escenario.', 'encourage');
+    this.guide.show('Navega entre preguntas y elige puertas con E. No verás aciertos hasta finalizar el escenario.', 'encourage');
+  }
+
+  canGoPreviousQuestion(): boolean {
+    return this.viewQuestionIndex() > 0;
+  }
+
+  canGoNextQuestion(): boolean {
+    const zone = this.currentZone();
+    if (!zone) return false;
+    return this.viewQuestionIndex() < zone.questions.length - 1;
+  }
+
+  goPreviousQuestion(): void {
+    if (!this.canGoPreviousQuestion()) return;
+    this.sfx.playClick();
+    this.viewQuestionIndex.update((i) => i - 1);
+    this.refreshHallwayQuestion();
+  }
+
+  goNextQuestion(): void {
+    if (!this.canGoNextQuestion()) return;
+    this.sfx.playClick();
+    this.viewQuestionIndex.update((i) => i + 1);
+    this.refreshHallwayQuestion();
+  }
+
+  private refreshHallwayQuestion(): void {
+    this.hallwayResetToken.update((n) => n + 1);
+    const q = this.currentQuestion();
+    const zone = this.currentZone();
+    if (q && zone) this.guide.setQuestionContext(q, zone.scenario);
+  }
+
+  selectedAnswerLabel(question: Question): string | null {
+    const student = this.auth.currentUser();
+    if (!student) return null;
+    const ans = this.data.answerForQuestion(student.id, question.id);
+    if (!ans) return null;
+    const opt = this.data.optionsForQuestion(question.id).find((o) => o.id === ans.selectedOptionId);
+    return opt?.text ?? null;
+  }
+
+  submitScenario(): void {
+    const zone = this.currentZone();
+    if (!zone || !zoneProgress(zone, this.answeredIds()).complete) return;
+    this.sfx.playClick();
+    this.decisionOpen.set(false);
+    this.phase.set('scenario-results');
+    this.guide.show('Escenario completado. Revisa tus resultados antes de volver al mapa.', 'thinking');
   }
 
   closeScenarioContext(): void {
@@ -627,21 +704,8 @@ export class ClinicalMissionComponent implements OnInit, OnDestroy {
 
     this.sfx.playClick();
     this.data.answerQuestion(student.id, task.id, question.id, optionId);
-    const zone = this.currentZone();
     this.guide.closeHintBubble();
-    this.guide.show('Respuesta registrada. Continúa con la siguiente situación.', 'encourage');
-
-    const next = zone ? nextUnansweredQuestion(zone, this.answeredIds()) : null;
-    if (next) {
-      this.hallwayResetToken.update((n) => n + 1);
-      this.decisionOpen.set(true);
-      this.phase.set('decision');
-      return;
-    }
-
-    this.decisionOpen.set(false);
-    this.phase.set('scenario-results');
-    this.guide.show('Escenario completado. Revisa tus resultados antes de volver al mapa.', 'thinking');
+    this.guide.show('Respuesta registrada. Puedes cambiarla o avanzar a otra pregunta.', 'encourage');
   }
 
   confirmScenarioResults(): void {

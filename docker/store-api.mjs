@@ -93,7 +93,7 @@ async function queryAll(client, sql, params) {
   return r.rows;
 }
 
-async function readStore() {
+async function loadStoreFromDb() {
   const client = await pool.connect();
   try {
     const store = {};
@@ -112,10 +112,65 @@ async function readStore() {
         store[table.key] = rows.map(mapToCamel);
       }
     }
-    return processExpiredSessionsInStore(store);
+    return store;
   } finally {
     client.release();
   }
+}
+
+async function readStore() {
+  return processExpiredSessionsInStore(await loadStoreFromDb());
+}
+
+/** REQ-14 — cierra sesiones 24 h después del plazo y consolida notas parciales. */
+function processPartialGradesForTask(store, taskId) {
+  const task = (store.groupTasks ?? []).find((t) => t.id === taskId);
+  if (!task) return store;
+
+  const studentIds = (store.groupStudents ?? [])
+    .filter((m) => m.groupId === task.groupId)
+    .map((m) => m.studentId);
+
+  let studentProgress = [...(store.studentProgress ?? [])];
+  for (const studentId of studentIds) {
+    const progress = studentProgress.find((p) => p.studentId === studentId && p.taskId === taskId) ?? {
+      id: `prg-${taskId}-${studentId}`,
+      studentId,
+      taskId,
+      progressPercentage: 0,
+      completed: false,
+      updatedAt: new Date().toISOString(),
+    };
+    if (progress.completed || progress.notaFinal != null) continue;
+
+    const questionIds = new Set(task.questionIds ?? []);
+    const answers = (store.studentAnswers ?? []).filter(
+      (a) => a.studentId === studentId && questionIds.has(a.questionId),
+    );
+
+    let patch;
+    if (!answers.length) {
+      patch = { ...progress, notaFinal: 1, progressPercentage: 0, updatedAt: new Date().toISOString() };
+    } else {
+      const correct = answers.filter((a) => a.isCorrect).length;
+      const total = task.questionIds?.length ?? 0;
+      const nota = total ? Math.round((1 + (correct / total) * 4) * 10) / 10 : 1;
+      patch = {
+        ...progress,
+        notaFinal: nota,
+        respuestasCorrectas: correct,
+        respuestasIncorrectas: answers.length - correct,
+        porcentajeAcierto: total ? Math.round((correct / total) * 100) : 0,
+        updatedAt: new Date().toISOString(),
+      };
+    }
+    studentProgress = [
+      patch,
+      ...studentProgress.filter((p) => !(p.studentId === studentId && p.taskId === taskId)),
+    ];
+  }
+
+  return { ...store, studentProgress };
 }
 
 function processExpiredSessionsInStore(store) {
@@ -123,11 +178,13 @@ function processExpiredSessionsInStore(store) {
   const now = Date.now();
   const dayMs = 24 * 60 * 60 * 1000;
   let changed = false;
+  const closedTaskIds = [];
   const taskSessions = store.taskSessions.map((session) => {
     if (session.status === 'FINISHED') return session;
     const end = new Date(session.scheduledEndAt).getTime();
     if (Number.isFinite(end) && now > end + dayMs) {
       changed = true;
+      closedTaskIds.push(session.taskId);
       return {
         ...session,
         status: 'FINISHED',
@@ -137,7 +194,13 @@ function processExpiredSessionsInStore(store) {
     }
     return session;
   });
-  return changed ? { ...store, taskSessions } : store;
+  if (!changed) return store;
+
+  let next = { ...store, taskSessions };
+  for (const taskId of closedTaskIds) {
+    next = processPartialGradesForTask(next, taskId);
+  }
+  return next;
 }
 
 async function writeStore(store) {
@@ -205,8 +268,8 @@ async function migrateFromJson() {
   if (!raw) return;
   const client = await pool.connect();
   try {
-    const { rowCount } = await client.query('SELECT 1 FROM users LIMIT 1');
-    if (rowCount > 0) {
+    const { rows } = await client.query('SELECT 1 FROM users LIMIT 1');
+    if (rows.length > 0) {
       console.log('PostgreSQL already has data — skipping JSON migration');
       return;
     }
@@ -214,9 +277,56 @@ async function migrateFromJson() {
     client.release();
   }
   console.log('Migrating existing JSON data to PostgreSQL...');
-  const store = JSON.parse(raw);
+  const store = sanitizeStoreForMigration(JSON.parse(raw));
   await writeStore(store);
   console.log('Migration from JSON complete');
+}
+
+function sanitizeStoreForMigration(store) {
+  if (Array.isArray(store.users)) {
+    const seen = new Set();
+    store.users = store.users.filter((user) => {
+      const email = user?.email?.trim().toLowerCase();
+      if (!email || seen.has(email)) return false;
+      seen.add(email);
+      return true;
+    });
+  }
+
+  const userIds = new Set((store.users ?? []).map((u) => u.id));
+  const keepUser = (id) => userIds.has(id);
+
+  if (store.studentProfiles) store.studentProfiles = store.studentProfiles.filter((p) => keepUser(p.userId));
+  if (store.teacherProfiles) store.teacherProfiles = store.teacherProfiles.filter((p) => keepUser(p.userId));
+  if (store.groups) store.groups = store.groups.filter((g) => keepUser(g.teacherId));
+
+  const groupIds = new Set((store.groups ?? []).map((g) => g.id));
+  if (store.groupStudents) {
+    store.groupStudents = store.groupStudents.filter((m) => keepUser(m.studentId) && groupIds.has(m.groupId));
+  }
+
+  if (store.situations) store.situations = store.situations.filter((s) => keepUser(s.createdById));
+  const situationIds = new Set((store.situations ?? []).map((s) => s.id));
+  if (store.scenarios) store.scenarios = store.scenarios.filter((s) => situationIds.has(s.situationId));
+
+  const scenarioIds = new Set((store.scenarios ?? []).map((s) => s.id));
+  if (store.questions) store.questions = store.questions.filter((q) => scenarioIds.has(q.scenarioId));
+
+  const questionIds = new Set((store.questions ?? []).map((q) => q.id));
+  if (store.answerOptions) store.answerOptions = store.answerOptions.filter((o) => questionIds.has(o.questionId));
+  if (store.groupTasks) {
+    store.groupTasks = store.groupTasks.filter((t) => groupIds.has(t.groupId) && situationIds.has(t.situationId));
+  }
+
+  const taskIds = new Set((store.groupTasks ?? []).map((t) => t.id));
+  if (store.studentAnswers) {
+    store.studentAnswers = store.studentAnswers.filter((a) => keepUser(a.studentId) && questionIds.has(a.questionId));
+  }
+  if (store.studentProgress) {
+    store.studentProgress = store.studentProgress.filter((p) => keepUser(p.studentId) && taskIds.has(p.taskId));
+  }
+
+  return store;
 }
 
 const PSYCHOLOGY_AI_SYSTEM_PROMPT = `
@@ -801,6 +911,10 @@ async function startup() {
   if (process.env.DATABASE_URL) {
     await migrateFromJson();
     console.log(`Store API listening on port ${port}, using PostgreSQL`);
+    void runSessionExpiryCron();
+    const sessionCronMs = Number(process.env.SESSION_CRON_MS ?? 60 * 60 * 1000);
+    const sessionCron = setInterval(() => void runSessionExpiryCron(), sessionCronMs);
+    sessionCron.unref?.();
   } else {
     console.warn('DATABASE_URL not set — falling back to JSON file storage');
   }
@@ -819,3 +933,22 @@ app.listen(port, '0.0.0.0', async () => {
     process.exit(1);
   }
 });
+
+/** REQ-14 — CRON horario: cierra casos vencidos + 24 h e impide accesos pendientes. */
+async function runSessionExpiryCron() {
+  if (!process.env.DATABASE_URL) return;
+  try {
+    const current = await loadStoreFromDb();
+    const normalized = processExpiredSessionsInStore(current);
+    const sessionsChanged =
+      JSON.stringify(normalized.taskSessions ?? []) !== JSON.stringify(current.taskSessions ?? []);
+    const progressChanged =
+      JSON.stringify(normalized.studentProgress ?? []) !== JSON.stringify(current.studentProgress ?? []);
+    if (sessionsChanged || progressChanged) {
+      await writeStore(normalized);
+      console.log('[REQ-14] Sesiones vencidas cerradas y notas parciales consolidadas.');
+    }
+  } catch (error) {
+    console.error('[REQ-14] Error en CRON de sesiones:', error);
+  }
+}

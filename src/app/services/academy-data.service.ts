@@ -28,6 +28,8 @@ import {
   ScenarioDraft,
   TaskDraft,
   ScheduleTaskResult,
+  UpdateAuthorizedListResult,
+  AuthorizedListDraft,
   User,
 } from '../models/academy.models';
 import { GLOBAL_RUBRIC_ID, IntentoEstudiante, RubricaEvaluacion } from '../models/evaluation.models';
@@ -772,6 +774,92 @@ export class AcademyDataService {
     return { ok: true, task, session, authorizations };
   }
 
+  /** REQ-05 — modifica autorizados de un caso agendado (no finalizado). */
+  updateSessionAuthorizedStudents(taskId: string, draft: AuthorizedListDraft): UpdateAuthorizedListResult {
+    const session = this.sessionForTask(taskId);
+    const task = this.taskById(taskId);
+    if (!session || !task) {
+      return { ok: false, error: 'Simulación no encontrada.' };
+    }
+    if (session.status === 'FINISHED') {
+      return { ok: false, error: 'No se puede modificar la lista de una sesión finalizada.' };
+    }
+
+    const authorizedIds = new Set<string>();
+
+    for (const invitee of draft.invitees ?? []) {
+      const email = invitee.email.trim().toLowerCase();
+      const name = invitee.name.trim();
+      const documentId = invitee.documentId?.trim() ?? '';
+      if (!email || !name || !documentId) continue;
+
+      let user = this.store().users.find((u) => u.email.toLowerCase() === email && u.role === 'STUDENT');
+      if (!user) {
+        user = this.createStudent(name, email, this.generateAuthCode(), documentId);
+      } else {
+        this.updateStudent(user.id, name, email, documentId);
+      }
+      if (!this.store().groupStudents.some((m) => m.groupId === task.groupId && m.studentId === user!.id)) {
+        this.addStudentToGroup(task.groupId, user.id);
+      }
+      authorizedIds.add(user.id);
+    }
+
+    for (const studentId of draft.authorizedStudentIds ?? []) {
+      authorizedIds.add(studentId);
+      if (!this.store().groupStudents.some((m) => m.groupId === task.groupId && m.studentId === studentId)) {
+        this.addStudentToGroup(task.groupId, studentId);
+      }
+    }
+
+    if (!authorizedIds.size) {
+      return { ok: false, error: 'Debe quedar al menos un estudiante autorizado.' };
+    }
+
+    const previous = new Set(session.authorizedStudentIds ?? []);
+    const next = [...authorizedIds];
+    const nextSet = new Set(next);
+    const addedStudentIds = next.filter((id) => !previous.has(id));
+    const removedStudentIds = [...previous].filter((id) => !nextSet.has(id));
+
+    const newAuthorizations: SessionAuthorization[] = addedStudentIds.map((studentId) => ({
+      id: this.id('sau'),
+      sessionId: session.id,
+      taskId: task.id,
+      studentId,
+      authCode: this.generateAuthCode(),
+      createdAt: new Date().toISOString(),
+    }));
+
+    const updatedSession: TaskSession = {
+      ...session,
+      authorizedStudentIds: next,
+      updatedAt: new Date().toISOString(),
+    };
+
+    const remainingAuthorizations = (this.store().sessionAuthorizations ?? []).filter(
+      (a) => !(a.taskId === taskId && removedStudentIds.includes(a.studentId)),
+    );
+
+    this.commit({
+      ...this.store(),
+      taskSessions: [
+        updatedSession,
+        ...(this.store().taskSessions ?? []).filter((s) => s.taskId !== taskId),
+      ],
+      sessionAuthorizations: [...newAuthorizations, ...remainingAuthorizations],
+    });
+
+    return {
+      ok: true,
+      task,
+      session: updatedSession,
+      addedStudentIds,
+      removedStudentIds,
+      newAuthorizations,
+    };
+  }
+
   /** @deprecated Use scheduleTaskToGroup */
   assignTaskToGroup(draft: TaskDraft): GroupTask | undefined {
     const result = this.scheduleTaskToGroup(draft);
@@ -1064,6 +1152,7 @@ export class AcademyDataService {
         | 'estimatedMinutes'
         | 'customMessage'
         | 'allowRetries'
+        | 'retryAuthorizedStudentIds'
       >
     >,
   ): TaskSession | undefined {
@@ -1150,11 +1239,13 @@ export class AcademyDataService {
     const now = Date.now();
     const dayMs = 24 * 60 * 60 * 1000;
     let closed = 0;
+    const closedTaskIds: string[] = [];
     const sessions = (this.store().taskSessions ?? []).map((session) => {
       if (session.status === 'FINISHED') return session;
       const end = new Date(session.scheduledEndAt).getTime();
       if (now > end + dayMs) {
         closed++;
+        closedTaskIds.push(session.taskId);
         return {
           ...session,
           status: 'FINISHED' as TaskSessionStatus,
@@ -1166,8 +1257,26 @@ export class AcademyDataService {
     });
     if (closed) {
       this.commit({ ...this.store(), taskSessions: sessions });
+      for (const taskId of closedTaskIds) {
+        this.processPartialGradesForTask(taskId);
+      }
     }
     return closed;
+  }
+
+  /** REQ-12 — el docente autoriza un nuevo intento para un estudiante. */
+  authorizeStudentRetry(taskId: string, studentId: string): boolean {
+    const session = this.sessionForTask(taskId);
+    if (!session) return false;
+    const ids = new Set(session.retryAuthorizedStudentIds ?? []);
+    ids.add(studentId);
+    this.updateTaskSession(taskId, { retryAuthorizedStudentIds: [...ids] });
+    return true;
+  }
+
+  isRetryAuthorized(taskId: string, studentId: string): boolean {
+    const session = this.sessionForTask(taskId);
+    return session?.retryAuthorizedStudentIds?.includes(studentId) ?? false;
   }
 
   /** REQ-10 — nota proporcional al avance si la sesión cierra sin completar. */

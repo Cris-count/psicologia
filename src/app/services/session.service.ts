@@ -110,11 +110,17 @@ export class SessionService {
 
   canStudentRetry(studentId: string, taskId: string): boolean {
 
-    const session = this.data.sessionForTask(taskId);
+    const progress = this.data.progressFor(studentId, taskId);
 
     const attempt = this.data.attemptForStudentTask(studentId, taskId);
 
-    if (!attempt) return true;
+    if (!progress.completed && !attempt) return true;
+
+    const session = this.data.sessionForTask(taskId);
+
+    const authorized = session?.retryAuthorizedStudentIds ?? [];
+
+    if (authorized.includes(studentId)) return true;
 
     return session?.allowRetries ?? false;
 
@@ -146,9 +152,15 @@ export class SessionService {
 
     if (!session || session.status === 'FINISHED') return null;
 
+    const remaining = this.remainingMinutes(session);
+
     const elapsed = this.elapsedMinutesFromOfficialStart(session);
 
-    return `${elapsed} / ${session.maxDurationMinutes} min`;
+    const rm = String(remaining).padStart(2, '0');
+
+    const em = String(elapsed).padStart(2, '0');
+
+    return `${em}:${rm} · ${session.maxDurationMinutes} min`;
 
   }
 

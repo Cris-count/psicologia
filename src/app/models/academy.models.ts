@@ -287,6 +287,23 @@ export type ScheduleTaskResult =
   | { ok: true; task: GroupTask; session: import('./session.models').TaskSession; authorizations: import('./session.models').SessionAuthorization[] }
   | { ok: false; error: string };
 
+/** REQ-05 — resultado al modificar autorizados de un caso ya agendado. */
+export type UpdateAuthorizedListResult =
+  | {
+      ok: true;
+      task: GroupTask;
+      session: import('./session.models').TaskSession;
+      addedStudentIds: string[];
+      removedStudentIds: string[];
+      newAuthorizations: import('./session.models').SessionAuthorization[];
+    }
+  | { ok: false; error: string };
+
+export interface AuthorizedListDraft {
+  authorizedStudentIds: string[];
+  invitees?: TaskInviteeDraft[];
+}
+
 export interface QuestionDraft {
   statement: string;
   category: QuestionCategory;

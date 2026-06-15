@@ -59,6 +59,7 @@ import { NotificationService } from '../../../services/notification.service';
               <th>Incorrectas</th>
               <th>Nota</th>
               <th>Pendientes</th>
+              <th>Reintento</th>
               <th>Feedback docente</th>
             </tr>
           </thead>
@@ -86,6 +87,19 @@ import { NotificationService } from '../../../services/notification.service';
                 </td>
                 <td>{{ row.pending }}</td>
                 <td>
+                  @if (row.progress.completed) {
+                    @if (isRetryAuthorized(row)) {
+                      <span class="retry-pill authorized">Autorizado</span>
+                    } @else {
+                      <button type="button" class="ghost-button" (click)="authorizeRetry(row)">
+                        Autorizar reintento
+                      </button>
+                    }
+                  } @else {
+                    <span class="muted">En curso</span>
+                  }
+                </td>
+                <td>
                   @if (row.intentoId) {
                     <textarea
                       rows="2"
@@ -100,7 +114,7 @@ import { NotificationService } from '../../../services/notification.service';
                 </td>
               </tr>
             } @empty {
-              <tr><td colspan="8">Sin resultados para el grupo seleccionado.</td></tr>
+              <tr><td colspan="9">Sin resultados para el grupo seleccionado.</td></tr>
             }
           </tbody>
         </table>
@@ -174,6 +188,22 @@ import { NotificationService } from '../../../services/notification.service';
         width: 100%;
         min-width: 160px;
       }
+
+      .retry-pill {
+        display: inline-block;
+        padding: 0.2rem 0.55rem;
+        border-radius: 999px;
+        font-family: var(--psy-font-hud);
+        font-size: 0.72rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .retry-pill.authorized {
+        background: rgba(57, 255, 20, 0.12);
+        color: var(--psy-neural);
+        border: 1px solid var(--psy-border-neural);
+      }
     `,
   ],
 })
@@ -246,5 +276,15 @@ export class TeacherResultsPage {
     const group = this.groups().find((g) => g.id === this.activeGroupId());
     if (!rows.length || !group) return;
     this.exportResults.downloadCsv(rows, group.name);
+  }
+
+  isRetryAuthorized(row: { student: { id: string }; task: { id: string } }): boolean {
+    return this.data.isRetryAuthorized(row.task.id, row.student.id);
+  }
+
+  authorizeRetry(row: { student: { id: string; name: string }; task: { id: string } }): void {
+    if (this.data.authorizeStudentRetry(row.task.id, row.student.id)) {
+      this.saveMessage.set(`Reintento autorizado para ${row.student.name} (REQ-12).`);
+    }
   }
 }
