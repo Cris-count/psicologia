@@ -1,15 +1,36 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: psicologo-db
+    environment:
+      POSTGRES_DB: psicologo
+      POSTGRES_USER: psicologo
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-psicologo_secret}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U psicologo"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   psicologo-api:
     build:
       context: .
       target: api
     image: psicologo:api
     container_name: psicologo-api
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "${API_PORT:-3000}:3000"
     environment:
       DATA_DIR: /data
       PORT: 3000
+      DATABASE_URL: ${DATABASE_URL:-postgres://psicologo:psicologo_secret@postgres:5432/psicologo}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-lite-latest}
       APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:8080}
@@ -57,3 +78,4 @@ services:
 volumes:
   psicologo_node_modules:
   psicologo_data:
+  postgres_data:
