@@ -113,8 +113,8 @@
 .scenario-panel--open {
   display: flex;
   flex-direction: column;
-  flex: 0 0 min(400px, 38vw);
-  max-width: min(400px, 38vw);
+  flex: 0 0 min(240px, 23vw);
+  max-width: min(240px, 23vw);
   min-height: 0;
   align-self: stretch;
   opacity: 1;
@@ -929,6 +929,116 @@
 .case-hint {
   width: 100%;
   margin-top: 0.25rem;
+}
+
+.case-hallway-hint {
+  margin: 0.65rem 0 0;
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--psy-radius-sm);
+  border: 1px dashed rgba(79, 195, 255, 0.35);
+  background: rgba(18, 16, 42, 0.85);
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--psy-muted);
+}
+
+.case-hallway-hint kbd {
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: rgba(79, 195, 255, 0.15);
+  color: var(--psy-accent);
+}
+
+.scenario-results-card {
+  max-width: min(720px, 96vw);
+  max-height: min(88vh, 900px);
+  overflow: auto;
+}
+
+.scenario-results-summary {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  color: var(--psy-muted);
+}
+
+.scenario-results-list {
+  list-style: none;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.scenario-result-item {
+  padding: 0.75rem 0.85rem;
+  border-radius: var(--psy-radius-sm);
+  border: 1px solid rgba(79, 195, 255, 0.25);
+  background: #12102a;
+}
+
+.scenario-result-item.ok {
+  border-color: rgba(82, 201, 168, 0.45);
+}
+
+.scenario-result-item.bad {
+  border-color: rgba(255, 107, 138, 0.45);
+}
+
+.scenario-result-item header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+}
+
+.scenario-result-num {
+  font-family: var(--psy-font-hud);
+  font-size: 0.52rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--psy-gold);
+}
+
+.scenario-result-badge {
+  font-family: var(--psy-font-hud);
+  font-size: 0.52rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.45rem;
+  border-radius: var(--psy-radius-pill);
+}
+
+.scenario-result-item.ok .scenario-result-badge {
+  background: rgba(82, 201, 168, 0.18);
+  color: #52c9a8;
+}
+
+.scenario-result-item.bad .scenario-result-badge {
+  background: rgba(255, 107, 138, 0.18);
+  color: #ff6b8a;
+}
+
+.scenario-result-q {
+  margin: 0 0 0.45rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--psy-ink);
+}
+
+.scenario-result-item p {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--psy-muted);
+}
+
+.scenario-result-fb {
+  margin-top: 0.5rem !important;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(79, 195, 255, 0.15);
+  color: var(--psy-ink) !important;
 }
 
 .case-option:hover {

@@ -3,6 +3,7 @@ import { inject, Injectable, OnDestroy, PLATFORM_ID, signal } from '@angular/cor
 
 const SESSION_KEY = 'mind-sphere-presence-session';
 const HEARTBEAT_MS = 25_000;
+const POLL_MS = 15_000;
 const API = '/api/presence';
 
 @Injectable({ providedIn: 'root' })
@@ -12,6 +13,7 @@ export class PresenceService implements OnDestroy {
   private userId: string | null = null;
   private path = '/login';
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  private pollTimer: ReturnType<typeof setInterval> | null = null;
   private eventSource: EventSource | null = null;
   private started = false;
 
@@ -25,7 +27,9 @@ export class PresenceService implements OnDestroy {
     this.sessionId = this.ensureSessionId();
     this.connectStream();
     void this.sendHeartbeat();
+    void this.fetchCount();
     this.heartbeatTimer = setInterval(() => void this.sendHeartbeat(), HEARTBEAT_MS);
+    this.pollTimer = setInterval(() => void this.fetchCount(), POLL_MS);
     window.addEventListener('beforeunload', this.onUnload);
   }
 
@@ -57,7 +61,10 @@ export class PresenceService implements OnDestroy {
     this.eventSource.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data) as { count?: number };
-        if (typeof data.count === 'number') this.activeCount.set(data.count);
+        if (typeof data.count === 'number') {
+          this.activeCount.set(data.count);
+          this.connected.set(true);
+        }
       } catch {
         /* ignore */
       }
@@ -65,10 +72,25 @@ export class PresenceService implements OnDestroy {
     this.eventSource.onerror = () => {
       this.connected.set(false);
       this.eventSource?.close();
+      void this.fetchCount();
       setTimeout(() => {
         if (this.started) this.connectStream();
       }, 4000);
     };
+  }
+
+  private async fetchCount(): Promise<void> {
+    try {
+      const res = await fetch(`${API}/count`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = (await res.json()) as { count?: number };
+      if (typeof data.count === 'number') {
+        this.activeCount.set(data.count);
+        this.connected.set(true);
+      }
+    } catch {
+      this.connected.set(false);
+    }
   }
 
   private async sendHeartbeat(): Promise<void> {
@@ -99,6 +121,8 @@ export class PresenceService implements OnDestroy {
     this.started = false;
     if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
     this.heartbeatTimer = null;
+    if (this.pollTimer) clearInterval(this.pollTimer);
+    this.pollTimer = null;
     this.eventSource?.close();
     this.eventSource = null;
     window.removeEventListener('beforeunload', this.onUnload);

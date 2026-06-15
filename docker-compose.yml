@@ -52,7 +52,7 @@ services:
     environment:
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
-    command: ["pnpm", "exec", "ng", "serve", "--host", "0.0.0.0", "--port", "4200", "--poll", "2000", "--proxy-config", "proxy.conf.json"]
+    command: ["pnpm", "exec", "ng", "serve", "--host", "0.0.0.0", "--port", "4200", "--poll", "2000", "--proxy-config", "proxy.docker.conf.json"]
 
 volumes:
   psicologo_node_modules:

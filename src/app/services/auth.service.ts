@@ -39,7 +39,11 @@ export class AuthService {
   }
 
   /** Estudiante: correo + tarjeta de identidad. Docente/admin: correo + contraseña. */
-  authenticateLogin(email: string, credential: string): { user: User | null; error?: string } {
+  authenticateLogin(
+    email: string,
+    credential: string,
+    expectedRole?: UserRole,
+  ): { user: User | null; error?: string } {
     const trimmedEmail = email.trim();
     const trimmedCredential = credential.trim();
     if (!trimmedEmail || !trimmedCredential) {
@@ -52,6 +56,9 @@ export class AuthService {
       if (!user) {
         return { user: null, error: 'Correo universitario o tarjeta de identidad incorrectos.' };
       }
+      if (expectedRole && user.role !== expectedRole) {
+        return { user: null, error: this.roleMismatchError(expectedRole) };
+      }
       return { user };
     }
 
@@ -59,7 +66,18 @@ export class AuthService {
     if (!staff) {
       return { user: null, error: 'Correo o contraseña incorrectos.' };
     }
+    if (expectedRole && staff.role !== expectedRole) {
+      return { user: null, error: this.roleMismatchError(expectedRole) };
+    }
     return { user: staff };
+  }
+
+  requiresVerificationCode(role: UserRole): boolean {
+    return role === 'STUDENT';
+  }
+
+  private roleMismatchError(expectedRole: UserRole): string {
+    return `Las credenciales no corresponden al rol ${this.roleLabel(expectedRole).toLowerCase()}.`;
   }
 
   establishSession(user: User): void {

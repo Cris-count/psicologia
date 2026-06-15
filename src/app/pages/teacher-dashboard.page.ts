@@ -21,7 +21,7 @@ import { ThreeBackgroundComponent } from '../shared/ui/three-background/three-ba
           <div class="sidebar-brand">
             <img class="app-logo" src="/mind-sphere-logo.svg" alt="" aria-hidden="true" />
             <div>
-              <p class="eyebrow">Maestro · Nivel Instructor</p>
+              <p class="eyebrow">Maestro · Instructor</p>
               <h1>Arena de Simulación</h1>
             </div>
           </div>
@@ -42,8 +42,6 @@ import { ThreeBackgroundComponent } from '../shared/ui/three-background/three-ba
           eyebrow="Maestro · Arena Instructor"
           [title]="teacher()?.name ?? 'Instructor'"
           subtitle="Gestiona grupos, tareas y resultados"
-          [level]="teacherLevel()"
-          [xpPercent]="teacherXpPercent()"
         >
           <app-game-logout-button hudActions label="Salir" [compact]="true" />
         </app-game-hud>
@@ -373,19 +371,6 @@ export class TeacherDashboardPage {
   assignedTasksCount(): number {
     const groupIds = new Set(this.groups().map((group) => group.id));
     return this.data.store().groupTasks.filter((task) => groupIds.has(task.groupId)).length;
-  }
-
-  teacherLevel(): number {
-    return Math.max(1, this.groups().length + this.assignedTasksCount());
-  }
-
-  teacherXpPercent(): number {
-    const groupIds = new Set(this.groups().map((group) => group.id));
-    const taskIds = new Set(this.data.store().groupTasks.filter((task) => groupIds.has(task.groupId)).map((task) => task.id));
-    const progressRows = this.data.store().studentProgress.filter((progress) => taskIds.has(progress.taskId));
-    if (!progressRows.length) return 0;
-    const total = progressRows.reduce((sum, progress) => sum + progress.progressPercentage, 0);
-    return Math.round(total / progressRows.length);
   }
 
   groupStudents(groupId: string): User[] {

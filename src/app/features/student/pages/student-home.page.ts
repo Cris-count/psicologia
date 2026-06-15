@@ -32,8 +32,6 @@ import { GameProgressComponent } from '../../../shared/ui/game-progress/game-pro
           [eyebrow]="'Estudiante · ' + pageTitle()"
           [title]="profile.characterName()"
           [subtitle]="'@' + profile.displayName()"
-          [level]="7"
-          [xpPercent]="progressPercent()"
           [avatarId]="profile.avatarId()"
         >
           <a class="ghost-button hud-customize" routerLink="/student/perfil" hudActions>Personalizar</a>
@@ -377,13 +375,6 @@ export class StudentHomePage implements OnInit {
     this.missionSession.update((n) => n + 1);
     this.guide.show('Simulador demo reiniciado. Abre la mision para jugar desde cero.', 'encourage');
   }
-  progressPercent(): number {
-    const tasks = this.groups().flatMap((group) => this.tasksForGroup(group.id));
-    if (!tasks.length) return 0;
-    const total = tasks.reduce((sum, task) => sum + this.progress(task.id).progressPercentage, 0);
-    return Math.round(total / tasks.length);
-  }
-
   private syncGuideContext(): void {
     if (this.view === 'groups') this.guide.setContext('student_groups');
     else if (this.view === 'tasks') this.guide.setContext('student_tasks');

@@ -24,6 +24,9 @@ import { GuideService } from '../../../shared/guide/services/guide.service';
 import { GameSfxService } from '../../../shared/services/game-sfx.service';
 import { GameProgressComponent } from '../../../shared/ui/game-progress/game-progress.component';
 import { MissionGameComponent } from './mission-game.component';
+import { MissionHallwayComponent } from './mission-hallway.component';
+import { ZONE_INDEX_BUILDING } from './game2d/interior.assets';
+import type { BuildingType } from './game2d/map.types';
 import { MissionGameState } from './mission-scene.types';
 import { buildWorldMap } from './game2d/map.builder';
 import {
@@ -42,7 +45,7 @@ import { PlayerAnimState } from './student-hero.assets';
 @Component({
   selector: 'app-clinical-mission',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, MissionGameComponent, GameProgressComponent],
+  imports: [CommonModule, MissionGameComponent, MissionHallwayComponent, GameProgressComponent],
   styleUrl: './clinical-mission.component.css',
   template: `
     <div class="game-root" [class.game-root--in-scenario]="scenarioPanelOpen() || phase() === 'scenario-context'">
@@ -64,11 +67,25 @@ import { PlayerAnimState } from './student-hero.assets';
 
       <div class="game-body">
         <div class="game-stage" [class.game-stage--frozen]="!controlsEnabled()">
-          <app-mission-game
-            [state]="gameState()"
-            (zoneReach)="onZoneReach($event)"
-            (pauseToggle)="togglePause()"
-          />
+          @if (phase() === 'decision' && decisionOpen() && currentQuestion(); as question) {
+            <app-mission-hallway
+              [statement]="question.statement"
+              [accent]="currentZone() ? ZONE_THEMES[currentZone()!.theme].accent : '#4fc3ff'"
+              [doors]="hallwayDoors()"
+              [buildingType]="hallwayBuildingType()"
+              [buildingLabel]="hallwayBuildingLabel()"
+              [questionIndex]="zoneProgressFor(currentZone()!).done + 1"
+              [questionTotal]="zoneProgressFor(currentZone()!).total"
+              [resetToken]="hallwayResetToken()"
+              (doorSelected)="pickOption(question, $event)"
+            />
+          } @else {
+            <app-mission-game
+              [state]="gameState()"
+              (zoneReach)="onZoneReach($event)"
+              (pauseToggle)="togglePause()"
+            />
+          }
 
           @if (phase() === 'map' && !paused()) {
             <div class="map-objective-hud">
@@ -126,41 +143,35 @@ import { PlayerAnimState } from './student-hero.assets';
             </div>
           }
 
-          @if (phase() === 'decision' && decisionOpen() && currentQuestion(); as question) {
-            <div class="game-decision-layer mobile-only">
-              <div class="decision-holo-bar">
-                <span class="material-symbols-outlined">psychology</span>
-                <div>
-                  <small>{{ currentZone() ? zoneLabel(currentZone()!) : '' }} · +{{ question.points }} pts</small>
-                  <p>{{ question.statement }}</p>
-                </div>
-              </div>
-              <div class="action-wheel">
-                @for (option of optionsFor(question.id); track option.id; let i = $index) {
-                  <button
-                    type="button"
-                    class="action-slot"
-                    [style.--slot-i]="i"
-                    (mouseenter)="sfx.playHover()"
-                    (click)="pickOption(question, option.id)"
-                  >
-                    <span class="action-key">{{ choiceLabel(i) }}</span>
-                    <span class="action-label">{{ option.text }}</span>
-                  </button>
-                }
-              </div>
-              <button type="button" class="game-btn ghost" (click)="requestQuestionHint(question)">
-                Consultar a GARY
-              </button>
-            </div>
-          }
-
-          @if (phase() === 'feedback' && lastFeedback(); as fb) {
-            <div class="game-overlay" [class.win]="fb.correct" [class.learn]="!fb.correct">
-              <div class="cutscene-card feedback-card">
-                <h2>{{ fb.correct ? '¡Análisis acertado!' : 'Ruta alternativa' }}</h2>
-                <p>{{ fb.text }}</p>
-                <button type="button" class="game-btn primary" (click)="continueAfterFeedback()">Avanzar</button>
+          @if (phase() === 'scenario-results' && currentZone(); as zone) {
+            <div class="game-overlay">
+              <div class="cutscene-card scenario-results-card">
+                <span class="game-tag">Resultados del escenario</span>
+                <h2>{{ zone.scenario.title }}</h2>
+                <p class="scenario-results-summary">
+                  Respondiste {{ scenarioZoneScore().total }} preguntas ·
+                  {{ scenarioZoneScore().correct }} correctas ·
+                  {{ scenarioZoneScore().pct }}% de acierto
+                </p>
+                <ul class="scenario-results-list">
+                  @for (row of scenarioZoneResults(); track row.statement; let i = $index) {
+                    <li class="scenario-result-item" [class.ok]="row.isCorrect" [class.bad]="!row.isCorrect">
+                      <header>
+                        <span class="scenario-result-num">Pregunta {{ i + 1 }}</span>
+                        <span class="scenario-result-badge">{{ row.isCorrect ? 'Correcta' : 'Incorrecta' }}</span>
+                      </header>
+                      <p class="scenario-result-q">{{ row.statement }}</p>
+                      <p><strong>Tu respuesta:</strong> {{ row.selectedText }}</p>
+                      @if (!row.isCorrect) {
+                        <p><strong>Respuesta esperada:</strong> {{ row.correctText }}</p>
+                      }
+                      <p class="scenario-result-fb">{{ row.feedback }}</p>
+                    </li>
+                  }
+                </ul>
+                <button type="button" class="game-btn primary" (click)="confirmScenarioResults()">
+                  Continuar al mapa
+                </button>
               </div>
             </div>
           }
@@ -245,36 +256,12 @@ import { PlayerAnimState } from './student-hero.assets';
                     Volver al mapa
                   </button>
                 </div>
-              } @else if (panelFeedback(); as fb) {
-                <div class="case-inline-feedback" [class.win]="fb.correct" [class.learn]="!fb.correct">
-                  <span class="material-symbols-outlined" aria-hidden="true">{{ fb.correct ? 'check_circle' : 'info' }}</span>
-                  <p>{{ fb.text }}</p>
-                  @if (fb.correct) {
-                    <span class="case-inline-next">Siguiente pregunta…</span>
-                  } @else {
-                    <button type="button" class="game-btn ghost case-continue-btn" (click)="continueAfterWrongAnswer()">
-                      Continuar
-                    </button>
-                  }
-                </div>
-              } @else if (decisionOpen() && currentQuestion(); as question) {
+              } @else if (phase() === 'decision' && decisionOpen() && currentQuestion(); as question) {
                 <p class="case-panel-context case-panel-context--compact">{{ zone.scenario.instructions }}</p>
                 <div class="case-question">
                   <span class="case-label">Pregunta {{ zoneProgressFor(zone).done + 1 }} de {{ zoneProgressFor(zone).total }}</span>
                   <p>{{ question.statement }}</p>
-                  <div class="case-options">
-                    @for (option of optionsFor(question.id); track option.id; let i = $index) {
-                      <button
-                        type="button"
-                        class="case-option"
-                        (mouseenter)="sfx.playHover()"
-                        (click)="pickOption(question, option.id)"
-                      >
-                        <span class="case-option-key">{{ choiceLabel(i) }}</span>
-                        <span>{{ option.text }}</span>
-                      </button>
-                    }
-                  </div>
+                  <p class="case-hallway-hint">Explora el pasillo, acércate a una puerta y pulsa <kbd>E</kbd> para registrar tu respuesta.</p>
                   <button type="button" class="game-btn ghost case-hint" (click)="requestQuestionHint(question)">
                     Consultar pista
                   </button>
@@ -304,6 +291,7 @@ export class ClinicalMissionComponent implements OnInit, OnDestroy {
   readonly onExit = input<(() => void) | undefined>();
 
   protected readonly appName = APP_NAME;
+  protected readonly ZONE_THEMES = ZONE_THEMES;
 
   private readonly data = inject(AcademyDataService);
   private readonly auth = inject(AuthService);
@@ -320,8 +308,8 @@ export class ClinicalMissionComponent implements OnInit, OnDestroy {
   readonly paused = signal(false);
   readonly lastFeedback = signal<{ correct: boolean; text: string } | null>(null);
   readonly missionResetToken = signal(0);
+  readonly hallwayResetToken = signal(0);
 
-  readonly panelFeedback = signal<{ correct: boolean; text: string } | null>(null);
   readonly finalAttempt = signal<IntentoEstudiante | null>(null);
   readonly gradingInProgress = signal(false);
   /** Zona mostrada en el panel lateral; persiste brevemente al cerrar para la transición CSS. */
@@ -375,8 +363,54 @@ export class ClinicalMissionComponent implements OnInit, OnDestroy {
 
   /** Panel lateral: contexto del escenario o preguntas activas. */
   readonly scenarioPanelOpen = computed(
-    () => (this.phase() === 'decision' || this.phase() === 'scenario-context') && this.scenarioPanelZone() !== null,
+    () =>
+      (this.phase() === 'decision' || this.phase() === 'scenario-context') && this.scenarioPanelZone() !== null,
   );
+
+  readonly hallwayDoors = computed(() => {
+    const q = this.currentQuestion();
+    if (!q) return [];
+    return this.optionsFor(q.id)
+      .slice(0, 4)
+      .map((o, i) => ({ id: o.id, label: this.choiceLabel(i), text: o.text }));
+  });
+
+  readonly hallwayBuildingType = computed((): BuildingType => {
+    const zone = this.currentZone();
+    if (!zone) return 'hospital';
+    return ZONE_INDEX_BUILDING[zone.index] ?? 'generic';
+  });
+
+  readonly hallwayBuildingLabel = computed(() => {
+    const zone = this.currentZone();
+    return zone?.scenario.title ?? 'Escenario clínico';
+  });
+
+  readonly scenarioZoneResults = computed(() => {
+    const zone = this.currentZone();
+    const student = this.auth.currentUser();
+    if (!zone || !student) return [];
+    return zone.questions.map((q) => {
+      const ans = this.data.answerForQuestion(student.id, q.id);
+      const opts = this.data.optionsForQuestion(q.id);
+      const selected = opts.find((o) => o.id === ans?.selectedOptionId);
+      const correct = opts.find((o) => o.isCorrect);
+      return {
+        statement: q.statement,
+        selectedText: selected?.text ?? '—',
+        correctText: correct?.text ?? '—',
+        isCorrect: ans?.isCorrect ?? false,
+        feedback: q.feedback,
+      };
+    });
+  });
+
+  readonly scenarioZoneScore = computed(() => {
+    const rows = this.scenarioZoneResults();
+    const correct = rows.filter((r) => r.isCorrect).length;
+    const total = rows.length;
+    return { correct, total, pct: total ? Math.round((correct / total) * 100) : 0 };
+  });
 
   readonly playerAnim = computed((): PlayerAnimState => {
     switch (this.phase()) {
@@ -550,7 +584,6 @@ export class ClinicalMissionComponent implements OnInit, OnDestroy {
     this.clearPanelCloseTimer();
     this.activeZoneIndex.set(index);
     this.scenarioPanelZone.set(zone);
-    this.panelFeedback.set(null);
     this.lastFeedback.set(null);
     this.guide.closeHintBubble();
     this.decisionOpen.set(false);
@@ -560,13 +593,12 @@ export class ClinicalMissionComponent implements OnInit, OnDestroy {
 
   startScenarioQuestions(): void {
     this.sfx.playClick();
-    this.panelFeedback.set(null);
     this.decisionOpen.set(true);
     this.phase.set('decision');
     const zone = this.currentZone();
     const q = this.currentQuestion();
     if (q && zone) this.guide.setQuestionContext(q, zone.scenario);
-    this.guide.show('Responde las preguntas del panel. No necesitas pulsar E.', 'encourage');
+    this.guide.show('Explora el pasillo institucional y elige una puerta con E. No verás el resultado hasta terminar el escenario.', 'encourage');
   }
 
   closeScenarioContext(): void {
@@ -595,73 +627,30 @@ export class ClinicalMissionComponent implements OnInit, OnDestroy {
 
     this.sfx.playClick();
     this.data.answerQuestion(student.id, task.id, question.id, optionId);
-    const ans = this.data.answerForQuestion(student.id, question.id);
     const zone = this.currentZone();
     this.guide.closeHintBubble();
+    this.guide.show('Respuesta registrada. Continúa con la siguiente situación.', 'encourage');
 
-    if (ans?.isCorrect) {
-      this.sfx.playSuccess();
-      this.decisionOpen.set(false);
-      this.panelFeedback.set({ correct: true, text: question.feedback });
-      this.guide.show('¡Buen análisis! Siguiente pregunta…', 'happy');
-
-      const next = zone ? nextUnansweredQuestion(zone, this.answeredIds()) : null;
-      this.clearAdvanceTimer();
-      this.advanceTimer = setTimeout(() => {
-        this.panelFeedback.set(null);
-        if (next) {
-          this.decisionOpen.set(true);
-          this.phase.set('decision');
-        } else {
-          this.completeCurrentZone();
-        }
-      }, 1500);
+    const next = zone ? nextUnansweredQuestion(zone, this.answeredIds()) : null;
+    if (next) {
+      this.hallwayResetToken.update((n) => n + 1);
+      this.decisionOpen.set(true);
+      this.phase.set('decision');
       return;
     }
 
-    this.sfx.playError();
-    this.guide.show('Respuesta registrada. Revisa la retroalimentación y continúa.', 'encourage');
-    this.panelFeedback.set({ correct: false, text: question.feedback });
     this.decisionOpen.set(false);
+    this.phase.set('scenario-results');
+    this.guide.show('Escenario completado. Revisa tus resultados antes de volver al mapa.', 'thinking');
   }
 
-  continueAfterWrongAnswer(): void {
+  confirmScenarioResults(): void {
     this.sfx.playClick();
-    this.panelFeedback.set(null);
-    const zone = this.currentZone();
-    if (!zone) {
-      this.returnToMap();
-      return;
-    }
-    const next = nextUnansweredQuestion(zone, this.answeredIds());
-    if (next) {
-      this.decisionOpen.set(true);
-      this.phase.set('decision');
-      return;
-    }
-    this.completeCurrentZone();
-  }
-
-  continueAfterFeedback(): void {
-    this.sfx.playClick();
-    this.lastFeedback.set(null);
-    const zone = this.currentZone();
-    if (!zone) {
-      this.returnToMap();
-      return;
-    }
-    const next = nextUnansweredQuestion(zone, this.answeredIds());
-    if (next) {
-      this.decisionOpen.set(true);
-      this.phase.set('decision');
-      return;
-    }
     this.completeCurrentZone();
   }
 
   private completeCurrentZone(): void {
     const zone = this.currentZone();
-    this.panelFeedback.set(null);
     this.returnToMap();
 
     if (this.progressPercent() >= 100) {
@@ -731,7 +720,6 @@ export class ClinicalMissionComponent implements OnInit, OnDestroy {
   private returnToMap(): void {
     this.phase.set('map');
     this.decisionOpen.set(false);
-    this.panelFeedback.set(null);
     this.lastFeedback.set(null);
     this.guide.closeHintBubble();
   }
@@ -777,7 +765,6 @@ export class ClinicalMissionComponent implements OnInit, OnDestroy {
     this.scenarioPanelZone.set(null);
     this.decisionOpen.set(false);
     this.paused.set(false);
-    this.panelFeedback.set(null);
     this.lastFeedback.set(null);
     this.finalAttempt.set(null);
     this.guide.closeHintBubble();

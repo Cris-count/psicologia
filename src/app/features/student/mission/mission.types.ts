@@ -6,6 +6,7 @@ export type MissionPhase =
   | 'zone-intro'
   | 'scenario-context'
   | 'decision'
+  | 'scenario-results'
   | 'feedback'
   | 'mission-complete';
 

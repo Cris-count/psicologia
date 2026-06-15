@@ -1,10 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, HostListener, inject, OnInit, signal } from '@angular/core';
+import { Component, HostListener, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { APP_LOGO_PATH, APP_NAME, APP_SHORT_TAGLINE } from '../core/branding.constants';
 import { User } from '../models/academy.models';
-import { AcademyDataService } from '../services/academy-data.service';
 import { AuthService } from '../services/auth.service';
 import { AuthVerificationService } from '../services/auth-verification.service';
 import { GuideCharacterComponent } from '../shared/guide/components/guide-character/guide-character.component';
@@ -68,16 +67,6 @@ import { ThreeBackgroundComponent } from '../shared/ui/three-background/three-ba
             </h1>
             <p class="lobby-tagline">Casos clínicos · Retroalimentación · Progreso gamificado</p>
           </div>
-
-          <aside class="lobby-stats" aria-label="Estadísticas del servidor">
-            <div class="stat-chip">
-              <span class="material-symbols-outlined" aria-hidden="true">groups</span>
-              <div>
-                <strong>{{ activePlayers() }}</strong>
-                <small>Jugadores activos</small>
-              </div>
-            </div>
-          </aside>
         </div>
 
         <div class="login-portal" [class.is-loading]="submitting()">
@@ -96,7 +85,7 @@ import { ThreeBackgroundComponent } from '../shared/ui/three-background/three-ba
             </div>
 
             @if (loginStep() === 'credentials') {
-            <form class="portal-form" (ngSubmit)="requestVerification()">
+            <form class="portal-form" (ngSubmit)="submitLogin()">
               <label class="portal-field" for="login-email">
                 Correo institucional
                 <span class="field-shell">
@@ -136,8 +125,8 @@ import { ThreeBackgroundComponent } from '../shared/ui/three-background/three-ba
               </label>
 
               <button class="portal-submit" type="submit" [disabled]="submitting()" (mouseenter)="sfx.playHover()">
-                <span class="material-symbols-outlined" aria-hidden="true">mail</span>
-                {{ submitting() ? 'Enviando código...' : 'ENVIAR CÓDIGO AL CORREO' }}
+                <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
+                {{ submitting() ? 'Conectando...' : 'INGRESAR' }}
               </button>
             </form>
             } @else {
@@ -185,8 +174,10 @@ import { ThreeBackgroundComponent } from '../shared/ui/three-background/three-ba
 
             @if (loginStep() === 'credentials') {
             <div class="demo-panel" aria-label="Credenciales demo">
-              <strong>Docente / admin</strong>
-              <span>maestro&#64;demo.edu · contraseña demo123</span>
+              <strong>Administrador</strong>
+              <span>superadmin&#64;demo.edu · contraseña demo123 · sin código</span>
+              <strong>Docente</strong>
+              <span>maestro&#64;demo.edu · contraseña demo123 · sin código</span>
               <strong>Estudiante</strong>
               <span>estudiante&#64;demo.edu · tarjeta 1020304050 · luego código al correo</span>
             </div>
@@ -197,18 +188,21 @@ import { ThreeBackgroundComponent } from '../shared/ui/three-background/three-ba
       </section>
 
       <footer class="lobby-footer">
-        <aside class="lobby-active-users" aria-label="Jugadores activos en tiempo real">
+        <div class="lobby-footer-spacer" aria-hidden="true"></div>
+        <aside class="lobby-active-users" aria-label="Usuarios conectados en tiempo real">
           <div class="active-users-card" [class.is-live]="presence.connected()">
             <span class="material-symbols-outlined" aria-hidden="true">groups</span>
             <div class="active-users-data">
               <strong>{{ presence.activeCount() }}</strong>
-              <small>Jugadores activos</small>
+              <small>{{ presence.connected() ? 'Conectados ahora' : 'Reconectando…' }}</small>
             </div>
-            <span class="live-indicator" aria-hidden="true"></span>
+            <span class="live-indicator" [attr.aria-label]="presence.connected() ? 'En vivo' : 'Sin conexión'"></span>
           </div>
         </aside>
-        <span class="footer-status">System Status: Optimal</span>
-        <span class="footer-copy">2026 NEURAL LABS INC.</span>
+        <div class="lobby-footer-meta">
+          <span class="footer-status">System Status: Optimal</span>
+          <span class="footer-copy">2026 NEURAL LABS INC.</span>
+        </div>
       </footer>
     </main>
   `,
@@ -219,7 +213,6 @@ export class LoginPage implements OnInit {
   protected readonly appLogo = APP_LOGO_PATH;
   private readonly auth = inject(AuthService);
   private readonly verification = inject(AuthVerificationService);
-  private readonly data = inject(AcademyDataService);
   private readonly router = inject(Router);
   private readonly loader = inject(GameLoaderService);
   protected readonly guide = inject(GuideService);
@@ -237,9 +230,6 @@ export class LoginPage implements OnInit {
   readonly submitting = signal(false);
   readonly parallaxX = signal(0);
   readonly parallaxY = signal(0);
-  protected readonly activePlayers = computed(
-    () => this.data.allStudents().filter((student) => student.status === 'ACTIVE').length,
-  );
 
   ngOnInit(): void {
     this.guide.setVisible(true);
@@ -254,7 +244,7 @@ export class LoginPage implements OnInit {
     this.parallaxY.set(y);
   }
 
-  async requestVerification(): Promise<void> {
+  async submitLogin(): Promise<void> {
     if (this.submitting()) return;
 
     this.error.set('');
@@ -270,19 +260,24 @@ export class LoginPage implements OnInit {
       return;
     }
 
-    const result = await this.verification.requestCode(this.email, this.credential);
-    this.submitting.set(false);
+    if (this.auth.requiresVerificationCode(preview.user.role)) {
+      const result = await this.verification.requestCode(this.email, this.credential);
+      this.submitting.set(false);
 
-    if (!result.ok) {
-      this.sfx.playError();
-      this.error.set(result.error ?? 'No se pudo enviar el código de verificación.');
+      if (!result.ok) {
+        this.sfx.playError();
+        this.error.set(result.error ?? 'No se pudo enviar el código de verificación.');
+        return;
+      }
+
+      this.sfx.playSuccess();
+      this.infoMessage.set(result.message ?? 'Revisa tu correo.');
+      this.verificationCode = '';
+      this.loginStep.set('verify');
       return;
     }
 
-    this.sfx.playSuccess();
-    this.infoMessage.set(result.message ?? 'Revisa tu correo.');
-    this.verificationCode = '';
-    this.loginStep.set('verify');
+    await this.completeLogin(preview.user);
   }
 
   backToCredentials(): void {

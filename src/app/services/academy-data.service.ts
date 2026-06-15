@@ -1663,6 +1663,13 @@ export class AcademyDataService {
         orderIndex: 3,
       },
       {
+        id: 'opt-hospital-1-d',
+        questionId: 'que-hospital-1',
+        text: 'Trasladar a la víctima herida a cirugía de urgencia antes de continuar con la atención a la familia',
+        isCorrect: false,
+        orderIndex: 4,
+      },
+      {
         id: 'opt-hospital-2-a',
         questionId: 'que-hospital-2',
         text: 'Resolución 459 de 2012',
@@ -1682,6 +1689,13 @@ export class AcademyDataService {
         text: 'Resolución 459 de 2012 y Ley 1448 de 2011',
         isCorrect: false,
         orderIndex: 3,
+      },
+      {
+        id: 'opt-hospital-2-d',
+        questionId: 'que-hospital-2',
+        text: 'Solo Ley 1257 de 2008, sin aplicar resoluciones de violencia de género',
+        isCorrect: false,
+        orderIndex: 4,
       },
       {
         id: 'opt-hospital-3-a',

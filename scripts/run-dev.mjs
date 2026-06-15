@@ -1,19 +1,34 @@
 /**
- * Desarrollo: API de presencia + ng serve con proxy.
+ * Desarrollo: Store API (incluye presencia) + ng serve con proxy.
  */
 import { spawn } from 'node:child_process';
-import { createPresenceServer } from './presence-api.mjs';
+import { mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 
-createPresenceServer(Number(process.env.PRESENCE_PORT ?? 4201));
+const dataDir = join(process.cwd(), '.data', 'dev');
+mkdirSync(dataDir, { recursive: true });
+
+const api = spawn('node', ['docker/store-api.mjs'], {
+  stdio: 'inherit',
+  shell: true,
+  env: { ...process.env, PORT: '3000', DATA_DIR: dataDir },
+});
 
 const ng = spawn('pnpm', ['exec', 'ng', 'serve', '--proxy-config', 'proxy.conf.json'], {
   stdio: 'inherit',
   shell: true,
 });
 
-ng.on('exit', (code) => process.exit(code ?? 0));
-
-process.on('SIGINT', () => {
+function shutdown(code = 0) {
+  api.kill('SIGINT');
   ng.kill('SIGINT');
-  process.exit(0);
+  process.exit(code);
+}
+
+api.on('exit', (code) => {
+  if (code && code !== 0) shutdown(code);
 });
+
+ng.on('exit', (code) => shutdown(code ?? 0));
+
+process.on('SIGINT', () => shutdown(0));

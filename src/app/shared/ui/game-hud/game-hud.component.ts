@@ -30,17 +30,6 @@ import { TeacherAvatarComposerComponent } from '../../guide/components/teacher-a
         </div>
       </div>
 
-      <div class="hud-center">
-        @if (level() !== null) {
-          <div class="hud-level">
-            <span>Lv. {{ level() }}</span>
-            <div class="hud-xp-track">
-              <span [style.width.%]="xpPercent()"></span>
-            </div>
-          </div>
-        }
-      </div>
-
       <div class="hud-right">
         <ng-content select="[hudActions]" />
       </div>
@@ -50,7 +39,7 @@ import { TeacherAvatarComposerComponent } from '../../guide/components/teacher-a
     `
       .game-hud-bar {
         display: grid;
-        grid-template-columns: 1fr auto 1fr;
+        grid-template-columns: 1fr auto;
         align-items: center;
         gap: 1rem;
         padding: 0.85rem 1.25rem;
@@ -77,11 +66,7 @@ import { TeacherAvatarComposerComponent } from '../../guide/components/teacher-a
       .hud-eyebrow { font-family: var(--psy-font-hud); font-size: 0.58rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--psy-accent); }
       .hud-identity strong { font-family: var(--psy-font-display); font-size: 1.05rem; color: var(--psy-gold); }
       .hud-identity small { color: var(--psy-muted); font-size: 0.82rem; }
-      .hud-level { display: grid; gap: 0.3rem; min-width: 140px; text-align: center; }
-      .hud-level > span { font-family: var(--psy-font-hud); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--psy-gold); }
-      .hud-xp-track { height: 8px; border-radius: var(--psy-radius-pill); background: rgba(0,0,0,0.4); border: 1px solid var(--psy-line); overflow: hidden; }
-      .hud-xp-track span { display: block; height: 100%; background: linear-gradient(90deg, var(--psy-primary), var(--psy-accent)); transition: width 0.6s ease; }
-      @media (max-width: 768px) { .game-hud-bar { grid-template-columns: 1fr; } .hud-center { order: 3; } }
+      @media (max-width: 768px) { .game-hud-bar { grid-template-columns: 1fr; } .hud-right { justify-content: flex-start; } }
     `,
   ],
 })
@@ -89,8 +74,6 @@ export class GameHudComponent {
   readonly eyebrow = input('');
   readonly title = input.required<string>();
   readonly subtitle = input('');
-  readonly level = input<number | null>(null);
-  readonly xpPercent = input(65);
   readonly avatar = input(true);
   readonly avatarId = input<AvatarId>('psych-alejandro');
   readonly teacherMode = input(false);

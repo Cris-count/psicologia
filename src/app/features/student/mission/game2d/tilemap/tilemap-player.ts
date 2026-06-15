@@ -115,30 +115,18 @@ export class TilemapPlayer {
 
 
   constructor(
-
     private readonly scene: Phaser.Scene,
-
     x: number,
-
     y: number,
-
-    private readonly mapLayer: Phaser.Tilemaps.TilemapLayer,
-
+    private readonly collider: Phaser.Tilemaps.TilemapLayer | Phaser.Physics.Arcade.StaticGroup,
     scale: number,
-
   ) {
 
     this.sprite = scene.physics.add.sprite(x, y, PLAYER_SPRITE.key, 0);
 
     scene.textures.get(PLAYER_SPRITE.key).setFilter(Phaser.Textures.FilterMode.LINEAR);
 
-
-
-    const ratio = PLAYER_SPRITE.frameWidth / PLAYER_SPRITE.frameHeight;
-
-    const h = PLAYER_SPRITE.displayHeight * scale;
-
-    this.sprite.setDisplaySize(Math.round(h * ratio), h);
+    this.applyDisplayScale(scale);
 
     this.sprite.setOrigin(0.5, 0.92);
 
@@ -146,13 +134,14 @@ export class TilemapPlayer {
 
     const body = this.sprite.body as Phaser.Physics.Arcade.Body;
 
+    body.enable = true;
     body.setCollideWorldBounds(true);
 
     this.fitBody();
 
 
 
-    scene.physics.add.collider(this.sprite, mapLayer);
+    scene.physics.add.collider(this.sprite, collider);
 
 
 
@@ -194,10 +183,21 @@ export class TilemapPlayer {
 
 
 
+  applyDisplayScale(scale: number): void {
+    const ratio = PLAYER_SPRITE.frameWidth / PLAYER_SPRITE.frameHeight;
+    const h = PLAYER_SPRITE.displayHeight * scale;
+    this.sprite.setDisplaySize(Math.round(h * ratio), h);
+    this.fitBody();
+  }
+
+  getDisplayHeight(): number {
+    return this.sprite.displayHeight;
+  }
+
   setVelocity(vx: number, vy: number): void {
-
+    const body = this.sprite.body as Phaser.Physics.Arcade.Body;
+    if (body) body.enable = true;
     this.sprite.setVelocity(vx, vy);
-
   }
 
 
