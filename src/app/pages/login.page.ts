@@ -106,8 +106,7 @@ import { ThreeBackgroundComponent } from '../shared/ui/three-background/three-ba
 
               <label class="portal-field" for="login-credential">
                 <span class="field-label-row">
-                  Tarjeta de identidad
-                  <small>(estudiantes) · Contraseña (docente/admin)</small>
+                  Contraseña
                 </span>
                 <span class="field-shell">
                   <input
@@ -116,7 +115,7 @@ import { ThreeBackgroundComponent } from '../shared/ui/three-background/three-ba
                     type="text"
                     [(ngModel)]="credential"
                     autocomplete="current-password"
-                    placeholder="Documento o contraseña"
+                    placeholder="Ingrese contraseña"
                     required
                     [disabled]="submitting()"
                   />
@@ -172,16 +171,7 @@ import { ThreeBackgroundComponent } from '../shared/ui/three-background/three-ba
               <p class="portal-error" role="alert">{{ error() }}</p>
             }
 
-            @if (loginStep() === 'credentials') {
-            <div class="demo-panel" aria-label="Credenciales demo">
-              <strong>Administrador</strong>
-              <span>superadmin&#64;demo.edu · contraseña demo123 · sin código</span>
-              <strong>Docente</strong>
-              <span>maestro&#64;demo.edu · contraseña demo123 · sin código</span>
-              <strong>Estudiante</strong>
-              <span>estudiante&#64;demo.edu · tarjeta 1020304050 · luego código al correo</span>
-            </div>
-            }
+
           </div>
         </div>
 

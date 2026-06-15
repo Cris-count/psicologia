@@ -4,6 +4,7 @@ import { AuthService } from '../../../services/auth.service';
 import { ThreeBackgroundComponent } from '../../../shared/ui/three-background/three-background.component';
 import { AdminHeaderComponent } from '../components/admin-header/admin-header.component';
 import { AdminSidebarComponent } from '../components/admin-sidebar/admin-sidebar.component';
+import { AdminSidebarService } from '../services/admin-sidebar.service';
 
 @Component({
   selector: 'app-admin-shell',
@@ -12,6 +13,11 @@ import { AdminSidebarComponent } from '../components/admin-sidebar/admin-sidebar
   host: { class: 'admin-root' },
   template: `
     <app-three-background intensity="ambient" />
+    <div
+      class="admin-sidebar-overlay"
+      [class.open]="sidebarService.sidebarOpen()"
+      (click)="sidebarService.close()"
+    ></div>
     <div class="admin-app">
       <app-admin-sidebar />
       <div class="admin-main">
@@ -29,6 +35,7 @@ import { AdminSidebarComponent } from '../components/admin-sidebar/admin-sidebar
 })
 export class AdminShellComponent implements OnInit, OnDestroy {
   private readonly auth = inject(AuthService);
+  protected readonly sidebarService = inject(AdminSidebarService);
 
   ngOnInit(): void {
     document.body.classList.add('admin-mode');

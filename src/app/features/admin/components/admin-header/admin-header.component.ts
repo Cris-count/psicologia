@@ -1,12 +1,10 @@
-import { ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit } from '@angular/core';
-
-import { Router } from '@angular/router';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 
 import { AuthService } from '../../../../services/auth.service';
 
 import { GameLogoutButtonComponent } from '../../../../shared/ui/game-logout-button/game-logout-button.component';
 
-
+import { AdminSidebarService } from '../../services/admin-sidebar.service';
 
 @Component({
 
@@ -20,15 +18,33 @@ import { GameLogoutButtonComponent } from '../../../../shared/ui/game-logout-but
 
     <header class="admin-header" aria-label="Cabecera administrativa">
 
-      <label class="admin-search">
+      <div class="admin-header-left">
 
-        <span class="material-symbols-outlined" aria-hidden="true">search</span>
+        <button
 
-        <input type="search" placeholder="Search parameters..." aria-label="Buscar" />
+          class="admin-hamburger"
 
-      </label>
+          type="button"
 
+          aria-label="Abrir menú"
 
+          (click)="sidebarService.toggle()"
+
+        >
+
+          <span class="material-symbols-outlined">menu</span>
+
+        </button>
+
+        <label class="admin-search">
+
+          <span class="material-symbols-outlined" aria-hidden="true">search</span>
+
+          <input type="search" placeholder="Search parameters..." aria-label="Buscar" />
+
+        </label>
+
+      </div>
 
       <div class="admin-header-actions">
 
@@ -71,6 +87,8 @@ import { GameLogoutButtonComponent } from '../../../../shared/ui/game-logout-but
 export class AdminHeaderComponent {
 
   protected readonly auth = inject(AuthService);
+
+  protected readonly sidebarService = inject(AdminSidebarService);
 
 }
 

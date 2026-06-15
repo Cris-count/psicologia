@@ -10,7 +10,7 @@ import { AcademyDataService } from '../../../../services/academy-data.service';
 
 import { AdminPlatformService } from '../../services/admin-platform.service';
 
-
+import { AdminSidebarService } from '../../services/admin-sidebar.service';
 
 @Component({
 
@@ -22,21 +22,39 @@ import { AdminPlatformService } from '../../services/admin-platform.service';
 
   template: `
 
-    <aside class="admin-sidebar" aria-label="Navegacion administrador">
+    <aside class="admin-sidebar" [class.open]="sidebarService.sidebarOpen()" aria-label="Navegacion administrador">
 
-      <div class="admin-brand">
+      <div class="admin-brand-row">
 
-        <h1>MIND-SPHERE</h1>
+        <div class="admin-brand">
 
-        <p>Command Center v4.0</p>
+          <h1>MIND-SPHERE</h1>
+
+          <p>Command Center v4.0</p>
+
+        </div>
+
+        <button
+
+          class="admin-sidebar-close"
+
+          type="button"
+
+          aria-label="Cerrar menú"
+
+          (click)="sidebarService.close()"
+
+        >
+
+          <span class="material-symbols-outlined">close</span>
+
+        </button>
 
       </div>
 
-
-
       <nav class="admin-nav" aria-label="Secciones">
 
-        <a routerLink="/admin/resumen" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        <a routerLink="/admin/resumen" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="sidebarService.close()">
 
           <span class="material-symbols-outlined" aria-hidden="true">hub</span>
 
@@ -44,7 +62,7 @@ import { AdminPlatformService } from '../../services/admin-platform.service';
 
         </a>
 
-        <a routerLink="/admin/usuarios" routerLinkActive="active">
+        <a routerLink="/admin/usuarios" routerLinkActive="active" (click)="sidebarService.close()">
 
           <span class="material-symbols-outlined" aria-hidden="true">group</span>
 
@@ -52,7 +70,7 @@ import { AdminPlatformService } from '../../services/admin-platform.service';
 
         </a>
 
-        <a routerLink="/admin/reportes" routerLinkActive="active">
+        <a routerLink="/admin/reportes" routerLinkActive="active" (click)="sidebarService.close()">
 
           <span class="material-symbols-outlined" aria-hidden="true">analytics</span>
 
@@ -61,8 +79,6 @@ import { AdminPlatformService } from '../../services/admin-platform.service';
         </a>
 
       </nav>
-
-
 
       <div class="admin-sidebar-actions">
 
@@ -97,6 +113,8 @@ export class AdminSidebarComponent implements OnInit {
   protected readonly platform = inject(AdminPlatformService);
 
   protected readonly data = inject(AcademyDataService);
+
+  protected readonly sidebarService = inject(AdminSidebarService);
 
   private readonly auth = inject(AuthService);
 
